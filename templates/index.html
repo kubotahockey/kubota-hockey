@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="jumbotron text-center bg-dark text-light">
+        <h1 class="display-4"><i class="fas fa-hockey-puck"></i> <strong>Welcome to KUBOTA HOCKEY</strong></h1>
+        <p class="lead">Kubota Hockey is committed to delivering top-notch statistical projections for players in professional leagues worldwide. By identifying historical comparables for today's players, Kubota Hockey offers valuable context to the future stars of both today and tomorrow.</p>
+        <hr class="my-4">
+        <h2><strong> Website Features</strong></h2>
+    </div>
+    
+    <div class="player-section text-center">
+        <h3 class="text-white mb-4">Player Pages</h3>
+        <div class="row">
+            <p>For premium users, access individual player cards for over 2,000 players from across the globe. The player dashboard provides the players 7 year projection plotted alongside their top 3 historical comparables, their top 10 player comparables, and percentile rankings.</p>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <img src="{{ url_for('static', filename='images/pic1.png') }}" class="img-fluid rounded" alt="Sample Player 1">
+            </div>
+            <div class="col-md-6 mb-4">
+                <img src="{{ url_for('static', filename='images/pic2.png') }}" class="img-fluid rounded" alt="Sample Player 2">
+            </div>
+        </div>
+        <a href="{{ url_for('player_page') }}" class="btn btn-primary mb-4" data-toggle="tooltip" title="View individual player stats">View Player Page</a>
+    </div>
+
+    <div class="forecast-section text-center mt-5">
+        <h3 class="text-white mb-4">7 Year Projections</h3>
+        <div>
+            <p>7 year projections for all players in our database.</p>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <img src="{{ url_for('static', filename='images/pic3.png') }}" class="img-fluid rounded" alt="7 Year Projections">
+            </div>
+        </div>
+        <a href="{{ url_for('forecasts') }}" class="btn btn-primary" data-toggle="tooltip" title="View detailed forecasts for hockey players">View Projections</a>
+    </div>
+
+    <div class="team-section text-center mt-5">
+        <h3 class="text-white mb-4">Team Insights</h3>
+        <div>
+            <p>Select an NHL team to view detailed insights and player projections for the team.</p>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <img src="{{ url_for('static', filename='images/team_insights.png') }}" class="img-fluid rounded" alt="Team Insights">
+            </div>
+        </div>
+        <a href="/teams?team=Calgary+Flames" class="btn btn-primary" data-toggle="tooltip" title="View detailed insights for NHL teams">View Team Insights</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Upgrade to Premium{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center text-white mb-4"><i class="fas fa-star"></i> Upgrade to Premium</h1>
+    <p class="text-white text-center mb-4">Upgrade to a premium membership to access exclusive content, including detailed player projections.</p>
+    <div class="text-center">
+        <form action="{{ url_for('upgrade') }}" method="post">
+            <button type="submit" class="btn btn-primary">Upgrade Now - $9.99</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    var stripe = Stripe('{{ key }}');
+</script>
+{% endblock %}

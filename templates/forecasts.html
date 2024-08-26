@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}7 Year Projections{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center text-white mb-4"><i class="fas fa-chart-line"></i> 7 Year Forecasts</h1>
+    <div class="form-group">
+        <label for="positionFilter" class="text-white">Filter by Position:</label>
+        <select class="form-control bg-dark text-light" id="positionFilter">
+            <option value="">All Positions</option>
+            <option value="FW">Forward</option>
+            <option value="DEF">Defense</option>
+        </select>
+    </div>
+    <div class="table-responsive">
+        <table id="forecastsTable" class="table table-dark table-hover table-striped table-sm">
+            <thead>
+                <tr class="table-header">
+                    <th colspan="3" class="border-right">Player Info</th>
+                    <th colspan="5" class="border-right">Total 7 Year Projections</th>
+                    <th colspan="3" class="border-right">7 Year Per Game Projections</th>
+                </tr>
+                <tr>
+                    <th class="name-column">Name</th>
+                    <th>Position</th>
+                    <th class="border-right">Age</th>
+                    <th class="sortable" data-column="GP">GP</th>
+                    <th class="sortable" data-column="G">G</th>
+                    <th class="sortable" data-column="A">A</th>
+                    <th class="sortable" data-column="PTS">PTS</th>
+                    <th class="border-right sortable" data-column="PIM">PIM</th>
+                    <th>G/GP</th>
+                    <th>A/GP</th>
+                    <th class="border-right">PTS/GP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                    <tr>
+                        <td><a href="{{ url_for('player_page') }}?player={{ row.name }}" class="text-white">{{ row.name }}</a></td>
+                        <td>{{ row.fw_def }}</td>
+                        <td class="border-right">{{ row.age }}</td>
+                        <td class="bar-cell" data-column="GP" data-value="{{ row.GP2 }}" data-order="{{ row.GP2 }}"></td>
+                        <td class="bar-cell" data-column="G" data-value="{{ row.GTOT }}" data-order="{{ row.GTOT }}"></td>
+                        <td class="bar-cell" data-column="A" data-value="{{ row.ATOT }}" data-order="{{ row.ATOT }}"></td>
+                        <td class="bar-cell" data-column="PTS" data-value="{{ row.PTSTOT }}" data-order="{{ row.PTSTOT}}"></td>
+                        <td class="border-right bar-cell" data-column="PIM" data-value="{{ row.PIM2 }}" data-order="{{ row.PIM2 }}"></td>
+                        <td>{{ row.G_per }}</td>
+                        <td>{{ row.A_per }}</td>
+                        <td class="border-right">{{ row.PTS_Per }}</td>
+                
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Added Chart.js library -->
+<script src="{{ url_for('static', filename='js/forecasts_scripts.js') }}"></script>
+{% endblock %}

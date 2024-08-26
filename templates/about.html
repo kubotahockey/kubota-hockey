@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}About{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center text-white mb-4"><i class="fas fa-info-circle"></i> About Us</h1>
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-white">Our Methodology</h2>
+            <p class="text-white">At KUBOTA Hockey, we pride ourselves on using a data-driven approach to project player performance. Our models leverage historical data, advanced statistics, and machine learning algorithms to provide accurate and insightful forecasts for player goals, assists, and other key metrics over a 7-year period.</p>
+            <p class="text-white">Our methodology involves collecting extensive player data, including historical performance, age, injury history, and other relevant factors. We use machine learning techniques such as K-nearest neighbors (KNN) to find patterns and similarities among players, allowing us to make robust projections for future performance. Additionally, we adjust our models for era-based performance metrics to ensure comparability across different periods in hockey history.</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h2 class="text-white">Inspiration</h2>
+            <p class="text-white">Our projection models are inspired by the groundbreaking work of Nate Silver and his PECOTA system for baseball. Nate Silver's work has demonstrated the power of data analytics in sports and has inspired countless analysts to apply similar methods to other sports. At KUBOTA Hockey, we strive to bring the same level of precision and insight to hockey analytics.</p>
+            <p class="text-white">PECOTA (Player Empirical Comparison and Optimization Test Algorithm) is a system designed by Nate Silver to forecast baseball player performance. It uses historical data to find comparable players and project their future performance. Inspired by this approach, we have developed our own system tailored to the unique characteristics and data available in hockey.</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+    </div>
+</div>
+{% endblock %}

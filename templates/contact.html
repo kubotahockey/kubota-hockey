@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Contact{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center text-white mb-4"><i class="fas fa-envelope"></i> Contact Us</h1>
+    <p class="text-white text-center mb-4">If you have any questions, feedback, or inquiries, feel free to reach out to us using the information below or by filling out the contact form.</p>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h4 class="text-white"><i class="fas fa-phone-alt"></i> Phone</h4>
+            <p class="text-white">+1 (403) 998-1615</p>
+            <h4 class="text-white"><i class="fas fa-envelope"></i> Email</h4>
+            <p class="text-white">kubotahockey@outlook.com</p>
+            <h4 class="text-white"><i class="fas fa-map-marker-alt"></i> Address</h4>
+            <p class="text-white">125 41 Ave SW<br>Calgary, AB T2S 3H3<br>CAN</p>
+        </div>
+        <div class="col-md-6">
+            <h4 class="text-white"><i class="fas fa-paper-plane"></i> Send Us a Message</h4>
+            <form action="/send_message" method="post">
+                <div class="form-group">
+                    <label for="name" class="text-white">Name</label>
+                    <input type="text" class="form-control bg-dark text-light" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email" class="text-white">Email</label>
+                    <input type="email" class="form-control bg-dark text-light" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="subject" class="text-white">Subject</label>
+                    <input type="text" class="form-control bg-dark text-light" id="subject" name="subject" required>
+                </div>
+                <div class="form-group">
+                    <label for="message" class="text-white">Message</label>
+                    <textarea class="form-control bg-dark text-light" id="message" name="message" rows="5" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Send Message</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,602 @@
+/* Custom Styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #121212; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #e0e0e0; /* Light text */
+    font-weight: 700; /* Bold headings */
+    text-decoration: underline;
+    text-decoration-color: #00e676; /* Neon green underline */
+    text-underline-offset: 0.2em; /* Adjust the offset value as needed */
+}
+    .info-row p {
+        margin: 0 10px;
+    }
+    .info-row p:first-child {
+        margin-right: 20px; /* Add spacing between the two columns */
+    }
+
+.player-stats {
+    color: white;
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.text-center {
+    text-align: center;
+}
+.projected-gp {
+    font-size: 2em; /* Increase the font size for projected GP */
+}
+
+<style>
+.projected-gp, .projected-g, .projected-a, .projected-pts, .projected-pim {
+    font-size: 0.25em; /* Increase the font size for the projected stats */
+}
+</style>
+
+/* Ensure all card titles and stats have consistent font sizes */
+.card-title {
+    font-size: 1.2em;
+}
+
+.projected-stat {
+    font-size: 4em; /* Ensure the projected stats have a larger font size */
+}
+
+/* Ensure all cards are the same height */
+.card {
+    height: 100%;
+}
+
+
+.navbar-nav .nav-item .nav-link:hover {
+    color: #00e676; /* Neon green */
+    background-color: rgba(255, 255, 255, 0.1); /* Slight background color change on hover */
+}
+
+.navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.1); /* Slight border color */
+}
+
+
+.navbar-brand i, .nav-link i {
+    color: #ffffff; /* White text */
+}
+
+.navbar-brand {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #ffffff; /* White text */
+}
+
+.nav-link {
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #ffffff; /* White text */
+    transition: color 0.3s;
+}
+
+
+
+.navbar {
+    background: linear-gradient(90deg, #265073, #265073); /* Gradient background */
+    border-bottom: 15px solid #00e676; /* Neon green border */
+    transition: background 0.5s ease;
+}
+
+
+
+.scrolled-navbar {
+    background: linear-gradient(90deg, #00251a, #004d40); /* Darker gradient background on scroll */
+}
+
+.footer {
+    background-color:#00e676 ; /* Slightly lighter dark */
+    color: #00e676;
+    padding: 20px 0;
+    border-top: 1px solid #333;
+}
+
+.footer .social-icons a {
+    margin: 0 10px;
+    color: #e0e0e0;
+    text-decoration: none;
+}
+
+.footer .social-icons a:hover {
+    color: #00e676; /* Neon green */
+}
+
+/* Table Styles */
+.table {
+    background-color: #ffffff; /* White background */
+    color: #333333; /* Dark text */
+    width: 100%; /* Ensure table fits within container */
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto; /* Enable horizontal scrolling for tables on small screens */
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f2f2f2; /* Light gray background for striped rows */
+}
+
+.table thead th {
+    background-color: #343a40; /* Dark header */
+    color: #ffffff; /* White text */
+}
+
+.table tbody td {
+    vertical-align: middle;
+}
+
+.table tbody tr:hover {
+    background-color: #e0e0e0; /* Light hover effect */
+    color: #333333; /* Dark text on hover */
+    cursor: pointer;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    color: #e0e0e0;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: translateY(-5px);
+}
+
+.btn-primary {
+    background-color: #00e676; /* Neon green */
+    border-color: #00e676;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #00c853;
+    border-color: #00c853;
+}
+
+/* Tooltip styles */
+.tooltip-inner {
+    background-color: #333; /* Dark background */
+    color: #e0e0e0; /* Light text */
+}
+
+/* Select2 Styles */
+.select2-container--bootstrap4 .select2-selection--single {
+    background-color: #343a40; /* Match navbar color */
+    border: 1px solid #495057;
+    color: #e0e0e0; /* Light text */
+}
+
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+    color: #e0e0e0; /* Light text */
+}
+
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
+    border-color: #e0e0e0 transparent transparent transparent;
+}
+
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--bootstrap4 .select2-dropdown {
+    background-color: #343a40; /* Match navbar color */
+    color: #e0e0e0; /* Light text */
+}
+
+.select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+    background-color: #495057; /* Slightly lighter dark */
+    color: #e0e0e0; /* Light text */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+
+    .card {
+        margin-bottom: 20px;
+    }
+
+    .footer .social-icons {
+        margin-top: 20px;
+    }
+
+    .footer .text-center {
+        text-align: center;
+    }
+
+    .footer .text-md-left, .footer .text-md-right {
+        text-align: center !important;
+    }
+}
+
+/* Ensure dropdown matches the input field style */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    float: left;
+    min-width: 100%;
+    padding: .5rem 0;
+    margin: .125rem 0 0;
+    font-size: 1rem;
+    color: #212529;
+    text-align: left;
+    list-style: none;
+    background-color: #343a40;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, .15);
+    border-radius: .25rem;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: .25rem 1.5rem;
+    clear: both;
+    font-weight: 400;
+    color: #ffffff;
+    text-align: inherit;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+}
+
+.dropdown-item:hover {
+    color: #16181b;
+    text-decoration: none;
+    background-color: #f8f9fa;
+}
+
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+.dashboard-comparisons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    padding: 20px;
+}
+
+.list-group-item-action {
+    cursor: pointer;
+}
+
+/* Custom Styles for the Table */
+.table-dark {
+    background-color: #343a40; /* Dark theme table for contrast */
+    color: #ffffff; /* White text for better readability */
+}
+
+.table-hover tbody tr:hover {
+    background-color: #50575d; /* Slightly lighter on hover for better interaction feedback */
+}
+
+.table th, .table td {
+    padding: 12px; /* More padding for a better visual structure */
+    vertical-align: middle; /* Align content in the middle vertically */
+    border-top: 1px solid #454d55; /* Subtle border for definition */
+}
+
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #454d55; /* Stronger border for heading */
+    font-size: 16px; /* Larger font size for headings */
+    background-color: #2c3238; /* Slightly darker background for the header */
+}
+
+
+/* Enhancing readability and aesthetics */
+.table tbody tr:nth-of-type(odd) {
+    background-color: #3a4046; /* Alternating row color for better readability */
+}
+
+.table-responsive {
+    max-width: 100%; /* Ensure table container does not exceed its parent width */
+    overflow-x: auto; /* Allows horizontal scrolling if necessary */
+}
+
+/* Styling for the visualization section */
+#additionalVisualizations {
+    padding: 20px;
+    background-color: #343a40; /* Matching the dark theme */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    height: auto; /* Adjust based on content */
+}
+
+.canvas {
+    width: 100% !important;
+    height: 400px !important; /* Adjust based on the visual needs */
+}
+
+<style>
+    .table thead th {
+        text-align: center;
+    }
+    .table tbody td {
+        text-align: center;
+    }
+    .table tbody td:first-child {
+        text-align: left;
+    }
+    .bar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .bar {
+        height: 10px;
+        background-color: #4caf50;
+        width: 100%;
+        margin-top: 5px;
+    }
+    .bar-score {
+        background-color: gold;
+    }
+    .bar-label {
+        margin-bottom: 5px;
+    }
+    .separator {
+        border-right: 2px solid white;
+    }
+</style>
+
+.player-link {
+    color: #ffffff; /* Custom color for links */
+    text-decoration: none; /* Remove underline */
+}
+
+.player-link:hover {
+    color: #00e676; /* Change color on hover */
+    text-decoration: underline; /* Add underline on hover */
+}
+
+/* Add this to your styles.css file if not already present */
+.player-section {
+    margin-top: 2rem;
+}
+
+.img-fluid {
+    max-width: 100%;
+    height: auto;
+}
+
+.rounded {
+    border-radius: 0.25rem;
+}
+
+.player-section h2 {
+    margin-bottom: 1rem;
+}
+
+.player-section .btn {
+    margin-top: 1rem;
+}
+.bar-cell {
+    position: relative;
+    padding-top: 22px; /* Extra padding for text above the bar */
+}
+
+.bar-cell canvas {
+    display: block;
+    margin: auto;
+}
+
+.border-right {
+    border-right: 2px solid #6c757d; /* Darker border color */
+}
+
+.table-sm th,
+.table-sm td {
+    padding: 0.3rem; /* Reduce padding for smaller text */
+    font-size: 0.75rem; /* Smaller font size */
+}
+
+.table-header {
+    background-color: #343a40; /* Dark gray color for headers */
+    color: #ffffff; /* White text color */
+    font-size: 0.75rem; /* Smaller font size for headers */
+}
+
+.name-column {
+    width: 200px; /* Set the width for the Name column */
+}
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 200px; /* Adjust height as needed */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+    margin-top: 30px;
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.chart-value {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 10px;
+    color: white;
+}
+
+#playerPercentiles .row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#exportContainer {
+    color: white; /* Ensure text color is white for contrast */
+    font-family: Arial, sans-serif; /* Ensure consistent font */
+}
+
+/* Custom table styles for the current year page */
+.table-custom {
+    font-size: 12px;
+    background-color: #343a40; /* Dark theme table for contrast */
+    color: #ffffff; /* Smaller font size for the table */
+}
+
+.table-custom thead th,
+.table-custom tbody td {
+    padding: 8px; /* Reduce padding for a more compact table */
+}
+
+/* Ensure all rows have the same background color */
+.table-custom tbody tr {
+    background-color: black; /* Ensure no background color is applied (transparent) */
+}
+
+/* Optionally, set a specific background color for rows (remove if you want the default) */
+.table-custom tbody tr:nth-child(odd),
+.table-custom tbody tr:nth-child(even) {
+    background-color: transparent; /* Or use a color like #fff for white background */
+}
+
+.table-custom tbody tr:hover {
+    background-color: #50575d;
+    color: #ffffff
+}
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Ensure input boxes don't shrink too small */
+.scoring-input {
+    min-width: 70px; /* Set a minimum width to ensure text is visible */
+    padding: 5px; /* Reduce padding to save space */
+    font-size: 14px; /* Adjust font size for readability */
+}
+
+/* Adjust labels for better visibility on smaller screens */
+label {
+    font-size: 12px;
+    margin-bottom: 4px; /* Reduce spacing to make better use of space */
+}
+
+
+/* Add media queries for further responsiveness */
+@media (max-width: 768px) {
+    .scoring-input {
+        min-width: 60px;
+        font-size: 12px;
+    }
+    
+    label {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .scoring-input {
+        min-width: 50px;
+        font-size: 10px;
+    }
+    
+    label {
+        font-size: 8px;
+    }
+}
+
+.team-logo-sm {
+    width: 30px;  /* Adjust the size as needed */
+    height: auto; /* Maintain aspect ratio */
+    margin-right: 10px;  /* Add some spacing between the logo and the text */
+    vertical-align: middle; /* Align the logo vertically with the text */
+}
+
+.team-rankings-sm {
+    font-size: 0.85rem; /* Adjust the font size as needed */
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide overflow text */
+    text-overflow: ellipsis; /* Add ellipsis (...) to overflow text */
+}
+
+.team-rankings-sm .team-logo-sm {
+    width: 20px; /* Smaller logo size */
+    height: auto; /* Maintain aspect ratio */
+    margin-right: 8px; /* Adjust spacing as needed */
+}
+
+.custom-card .card-body {
+    padding: 15px; /* Smaller padding to fit more cards on a row */
+}
+
+.projected-stat {
+    font-size: 1.25rem; /* Base font size */
+    font-weight: bold;
+    margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .projected-stat {
+        font-size: 1.15rem;
+    }
+    .custom-card .card-title {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .projected-stat {
+        font-size: 1.1rem;
+    }
+    .custom-card .card-title {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .projected-stat {
+        font-size: 1rem;
+    }
+    .custom-card .card-title {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .projected-stat {
+        font-size: 0.9rem;
+    }
+    .custom-card .card-title {
+        font-size: 0.85rem;
+    }
+}

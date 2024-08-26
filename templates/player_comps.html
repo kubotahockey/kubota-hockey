@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Player Comparisons{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="text-center text-white mb-4">Player Comparisons</h1>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="form-group">
+                <label for="playerSearch" class="text-white">Search for a Player:</label>
+                <input type="text" class="form-control bg-dark text-light mx-auto" id="playerSearch" placeholder="Enter player name..." title="Type to search for a player" style="max-width: 500px;">
+            </div>
+            <table id="compsTable" class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>Historical Player</th>
+                        <th>Current Player</th>
+                        <th>Age</th>
+                        <th>Position</th>
+                        <th>Height</th>
+                        <th>Weight</th>
+                        <th>Draft Year</th>
+                        <th>Pick Number</th>
+                        <th>SCORE</th>
+                        <th>Season</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Include DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap4.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.3/js/dataTables.bootstrap4.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    var table = $('#compsTable').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "ajax": {
+            "url": "/api/player_comps",
+            "type": "GET"
+        },
+        "columns": [
+            { "data": "Comparables" },
+            { "data": "name" },
+            { "data": "age" },
+            { "data": "fw_def" },
+            { "data": "Height" },
+            { "data": "Weight" },
+            { "data": "draft_year" },
+            { "data": "pick_number" },
+            { "data": "SCORE" },
+            { "data": "season" }
+        ],
+        "paging": true,
+        "pageLength": 15,
+        "searching": true,
+        "info": false,
+        "ordering": true,
+        "order": [[8, "desc"]] // Sort by SCORE descending
+    });
+
+    // Custom search functionality
+    $('#playerSearch').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+});
+</script>
+{% endblock %}
+
