@@ -13,6 +13,7 @@ setup(
       packages = find_packages(),
       install_requires=[
           'Flask>=1.1.2',
+          'flask_login',
           'pandas',
           'numpy',
           'stripe',
