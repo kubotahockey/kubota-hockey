@@ -6,7 +6,7 @@ import random
 import stripe
 import io
 import csv
-import unicodedata
+import gunicorn
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -469,4 +469,6 @@ def upgrade_success():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    pass
+
+
