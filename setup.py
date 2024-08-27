@@ -13,12 +13,10 @@ setup(
       packages = find_packages(),
       install_requires=[
           'Flask>=1.1.2',
+          'flask_login',
           'pandas',
           'numpy',
-          'random',
           'stripe',
-          'io',
-          'csv',
           ],
       author = 'Brennan',
       author_email= 'kubotahockey@outlook.com',
