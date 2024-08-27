@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 26 16:34:51 2024
-
-@author: brennan
-"""
-
 from setuptools import setup, find_packages
 
 setup(
