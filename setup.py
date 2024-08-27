@@ -16,8 +16,6 @@ setup(
           'pandas',
           'numpy',
           'stripe',
-          'io',
-          'csv',
           ],
       author = 'Brennan',
       author_email= 'kubotahockey@outlook.com',
