@@ -17,6 +17,7 @@ setup(
           'pandas',
           'numpy',
           'stripe',
+          'gunicorn',
           ],
       author = 'Brennan',
       author_email= 'kubotahockey@outlook.com',
