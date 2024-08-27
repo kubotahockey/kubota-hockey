@@ -1,0 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug 26 18:34:05 2024
+
+@author: brennan
+"""
+
+pandas == 2.2.2
+
+flask == 3.0.3
+
+flask_login == 0.6.3
+
+numpy == 1.26.4
+
+stripe == 10.6.0
+
