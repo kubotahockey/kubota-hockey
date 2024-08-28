@@ -12,10 +12,10 @@ app.secret_key = 'your_secret_key'
 
 
 # Load the CSV data
-df_projections = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTAPROJECTIONS.csv')
-df_comps = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTACOMPS.csv')
-df_logos = pd.read_csv('C:/Users/brennan/Kubota Website/playerteams.csv')
-df_final_projections = pd.read_csv('C:/Users/brennan/Kubota Website/FINALNHLPLAYERPROJECTIONS.csv')
+df_projections = pd.read_csv('KUBOTAPROJECTIONS.csv')
+df_comps = pd.read_csv('KUBOTACOMPS.csv')
+df_logos = pd.read_csv('playerteams.csv')
+df_final_projections = pd.read_csv('FINALNHLPLAYERPROJECTIONS.csv')
 df_merged = df_projections.merge(df_logos[['URL', 'Team', 'Image']], left_on='link', right_on='URL', how='left')
 
 
@@ -204,10 +204,16 @@ def get_player_data():
     if not projection_data:
         return jsonify({'error': 'No data found for this player.'}), 404
 
-    anchor = df_projections[df_projections['name'] == player_name]['anchor'].values[0]
-    comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')  # Replace NA with 0
-    image_link = df_logos[df_logos['URL'] == anchor]['Image'].values[0]
-    return jsonify({'projection': projection_data, 'comps': comps_data,'image_link': image_link})
+    try:
+        anchor = df_projections[df_projections['name'] == player_name]['anchor'].values[0]
+        if anchor not in df_comps['anchor'].values:
+            return jsonify({'error': 'No comparables found for this player.'}), 404
+        comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')
+        image_link = df_logos[df_logos['URL'] == anchor]['Image'].values[0]
+        return jsonify({'projection': projection_data, 'comps': comps_data, 'image_link': image_link})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'error': 'An unexpected error occurred.'}), 500
 
 
 @app.route('/player_comps')
