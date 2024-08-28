@@ -600,3 +600,23 @@ label {
         font-size: 0.85rem;
     }
 }
+
+/* Hover effect across the entire row */
+table.table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Make player name links white */
+table.table tbody tr td a {
+    color: white !important;
+    text-decoration: none;
+}
+
+table.table tbody tr td a:hover {
+    color: rgba(255, 255, 255, 0.7) !important; /* Optional: lighter shade on hover */
+}
+
+
+
+
+

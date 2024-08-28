@@ -7,17 +7,73 @@
     <h1 class="text-center text-white mb-4"><i class="fas fa-info-circle"></i> About Us</h1>
     <div class="row">
         <div class="col-md-12">
-            <h2 class="text-white">Our Methodology</h2>
-            <p class="text-white">At KUBOTA Hockey, we pride ourselves on using a data-driven approach to project player performance. Our models leverage historical data, advanced statistics, and machine learning algorithms to provide accurate and insightful forecasts for player goals, assists, and other key metrics over a 7-year period.</p>
-            <p class="text-white">Our methodology involves collecting extensive player data, including historical performance, age, injury history, and other relevant factors. We use machine learning techniques such as K-nearest neighbors (KNN) to find patterns and similarities among players, allowing us to make robust projections for future performance. Additionally, we adjust our models for era-based performance metrics to ensure comparability across different periods in hockey history.</p>
+            <p class="text-white">KUBOTA Hockey seeks to provide high quality projections for professional hockey players around the world.</p>
+            <p class="text-white">Having enjoyed success with the initial release of the KUBOTA projection system in 2023-2024, the new website for KUBOTA hockey has taken things even further. With improvements made to the base model along with an all new NHLe model, KUBOTA hockey is your one stop shop for fantasy and hockey enthusiasts alike.</p>
+            <p class="text-white">Based on the PECOTA system developed by Nate Silver in the early 2000’s, KUBOTA uses k-nearest neighbor machine learning to determine historical comparables for almost every rostered and NHL affiliated player heading into the current season. </p>
+            <p class="text-white">This allows for an age regression to occur for a specific player tailored to players from the past who profile most similarly. 37 year old Sidney Crosby will not regress the same way your average 37 year old would. This is the crux of the KUBOTA system. </p>
         </div>
     </div>
 
     <div class="row mt-4">
         <div class="col-md-12">
-            <h2 class="text-white">Inspiration</h2>
-            <p class="text-white">Our projection models are inspired by the groundbreaking work of Nate Silver and his PECOTA system for baseball. Nate Silver's work has demonstrated the power of data analytics in sports and has inspired countless analysts to apply similar methods to other sports. At KUBOTA Hockey, we strive to bring the same level of precision and insight to hockey analytics.</p>
-            <p class="text-white">PECOTA (Player Empirical Comparison and Optimization Test Algorithm) is a system designed by Nate Silver to forecast baseball player performance. It uses historical data to find comparable players and project their future performance. Inspired by this approach, we have developed our own system tailored to the unique characteristics and data available in hockey.</p>
+            <h2 class="text-white">The Nitty Gritty</h2>
+            <p class="text-white">KUBOTA Hockey currently consists of three unique player models to provide a wide range of predictions that best accommodate the players within our database.</p>
+            <p class="text-white"><strong>1. KUBOTA NHL</strong><br>
+              - The most comprehensive of the three and Kubota Hockey’s core model.<br>
+              - Finds player comparables dating back to the 1963 season.<br>
+              - Projects the following stats for all NHL players who have played NHL games in all three of the prior seasons:
+              <ul>
+                <li>GP (Games Played)</li>
+                <li>G (Goals)</li>
+                <li>A (Assists)</li>
+                <li>PTS (Points)</li>
+                <li>SOG (Shots on Goal)</li>
+                <li>PIM (Penalty Minutes)</li>
+                <li>+/- (Plus/Minus)</li>
+                <li>PPG (Power Play Goals)</li>
+                <li>PPA (Power Play Assists)</li>
+                <li>SHG (Short-Handed Goals)</li>
+                <li>SHA (Short-Handed Assists)</li>
+              </ul>
+            </p>
+            <p class="text-white">
+                <strong>2. KUBOTA NHL PERIPHERALS</strong><br>
+                  - Due to NHL hit and block data being made available after the 2007 season, this model performs the same process as the original KUBOTA NHL model but specifically for HITS and BLOCKS:
+                  <ul>
+                    <li>BLK (Blocks)</li>
+                    <li>HIT (Hits)</li>
+                  </ul>
+                </p>
+            <p class="text-white">
+              <strong>3. KUBOTA NHL EQUIVALENCIES</strong><br>
+              - The most ambitious of the three, the NHL Equivalencies model attempts to project how all NHL-affiliated players with fewer than 3 seasons of NHL experience would perform in the NHL this season, given their production in lower-level leagues.<br>
+              - Due to limited data available, the model provides the following statistics:
+              <ul>
+                <li>GP (Games Played)</li>
+                <li>G (Goals)</li>
+                <li>A (Assists)</li>
+                <li>PTS (Points)</li>
+                <li>PIM (Penalty Minutes)</li>
+              </ul>
+            </p>
+            <h2 class="text-white">The Future of KUBOTA Hockey </h2>
+              <strong>Features upon website release:</strong>
+              <ul>
+                <li>2024 NHL skater projections.</li>
+                <li>2024 NHLe projections for NHL affiliated skaters.</li>
+                <li>7 Year projections for NHL associated skaters.</li>
+                <li>7 Year NHL organizational outlook page.</li>
+                <li>Dynasty league rankings.</li>
+              </ul>
+              - <strong>Features to be added soon:</strong>
+              <ul>
+                <li>7 Year NHL affiliated goalie projections.</li>
+                <li>Roster/Line builder tool.</li>
+                <li>SHL, LIIGA, DEL, NL, KHL projections.</li>
+                <li>2024 NHL goalie projections.</li>
+              </ul>
+            </p>
+
         </div>
     </div>
 

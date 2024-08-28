@@ -230,12 +230,8 @@ function displayPlayerChart(player, comps) {
             showLine: true
         };
 
-        // Finding the comparables with the highest PLUSSCORE, minusSCORE, and normSCORE
-        const maxPLUSSCOREComp = comps.reduce((max, comp) => comp.PLUSSCORE > (max.PLUSSCORE || -Infinity) ? comp : max, {});
-        const maxMinusSCOREComp = comps.reduce((max, comp) => comp.minusSCORE > (max.minusSCORE || -Infinity) ? comp : max, {});
-        const maxNormSCOREComp = comps.reduce((max, comp) => comp.normSCORE > (max.normSCORE || -Infinity) ? comp : max, {});
-
-        const selectedComps = [maxPLUSSCOREComp, maxMinusSCOREComp, maxNormSCOREComp];
+        // Sorting the comparables by SCORE in descending order and selecting the top 3
+        const selectedComps = comps.sort((a, b) => b.SCORE - a.SCORE).slice(0, 3);
 
         // Define colors for comparables
         const colors = [

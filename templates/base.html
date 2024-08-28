@@ -27,14 +27,9 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('currentyear') }}"><i class="fas fa-calendar-alt"></i> Current Year</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('forecasts') }}"><i class="fas fa-chart-line"></i> 7 Year Projections</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('player_page') }}"><i class="fas fa-user"></i> Player Page</a></li>
+                <li class="nav-item"><a class="nav-link" href="/teams?team=Calgary+Flames"><i class="fas fa-users"></i> Team Pages</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}"><i class="fas fa-info-circle"></i> About</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}"><i class="fas fa-envelope"></i> Contact</a></li>
-                {% if current_user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('upgrade') }}"><i class="fas fa-star"></i> Upgrade</a></li>
-                {% endif %}
             </ul>
         </div>
     </nav>
@@ -44,12 +39,10 @@
     <footer class="footer bg-dark text-light text-center py-3 mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-6 text-center text-md-left">&copy; 2024 Your Company. All rights reserved.</div>
+                <div class="col-md-6 text-center text-md-left">&copy; 2024 Kubota Hockey. All rights reserved.</div>
                 <div class="col-md-6 text-center text-md-right social-icons">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="https://buymeacoffee.com/kubotahockey"><i class="fa fa-coffee"></i></a>
+                    <a href="https://www.youtube.com/@WhatsHappeningHockey"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
         </div>

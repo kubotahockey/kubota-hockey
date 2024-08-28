@@ -8,20 +8,30 @@
         <h1 class="display-4"><i class="fas fa-hockey-puck"></i> <strong>Welcome to KUBOTA HOCKEY</strong></h1>
         <p class="lead">Kubota Hockey is committed to delivering top-notch statistical projections for players in professional leagues worldwide. By identifying historical comparables for today's players, Kubota Hockey offers valuable context to the future stars of both today and tomorrow.</p>
         <hr class="my-4">
-        <h2><strong> Website Features</strong></h2>
     </div>
+    
+    <div class="currentyear-section text-center mt-5">
+        <h3 class="text-white mb-4">Current Year Projections</h3>
+        <div>
+            <p>Access NHL specific projections for the 2024/2025 season and tailor to your own specific league settings</p>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-4">
+            </div>
+        </div>
+        <a href="{{ url_for('currentyear') }}" class="btn btn-primary" data-toggle="tooltip" title="View current year projections">View Skater Projections</a>
+    </div>
+    
     
     <div class="player-section text-center">
         <h3 class="text-white mb-4">Player Pages</h3>
         <div class="row">
-            <p>For premium users, access individual player cards for over 2,000 players from across the globe. The player dashboard provides the players 7 year projection plotted alongside their top 3 historical comparables, their top 10 player comparables, and percentile rankings.</p>
+            <p>Access individual player cards for over 2,000 players from across the globe. The player dashboard provides the players 7 year projection plotted alongside their top 3 historical comparables, their top 10 player comparables, and percentile rankings.</p>
         </div>
         <div class="row">
             <div class="col-md-6 mb-4">
-                <img src="{{ url_for('static', filename='images/pic1.png') }}" class="img-fluid rounded" alt="Sample Player 1">
             </div>
             <div class="col-md-6 mb-4">
-                <img src="{{ url_for('static', filename='images/pic2.png') }}" class="img-fluid rounded" alt="Sample Player 2">
             </div>
         </div>
         <a href="{{ url_for('player_page') }}" class="btn btn-primary mb-4" data-toggle="tooltip" title="View individual player stats">View Player Page</a>
@@ -34,7 +44,6 @@
         </div>
         <div class="row">
             <div class="col-md-12 mb-4">
-                <img src="{{ url_for('static', filename='images/pic3.png') }}" class="img-fluid rounded" alt="7 Year Projections">
             </div>
         </div>
         <a href="{{ url_for('forecasts') }}" class="btn btn-primary" data-toggle="tooltip" title="View detailed forecasts for hockey players">View Projections</a>
@@ -47,10 +56,21 @@
         </div>
         <div class="row">
             <div class="col-md-12 mb-4">
-                <img src="{{ url_for('static', filename='images/team_insights.png') }}" class="img-fluid rounded" alt="Team Insights">
             </div>
         </div>
         <a href="/teams?team=Calgary+Flames" class="btn btn-primary" data-toggle="tooltip" title="View detailed insights for NHL teams">View Team Insights</a>
+    </div>
+    <!-- YouTube Channel Section -->
+    <div class="youtube-section text-center mt-5">
+        <h3 class="text-white mb-4">Check Out Our YouTube Channel</h3>
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <a href="https://www.youtube.com/@WhatsHappeningHockey" target="_blank">
+                    <img src="{{ url_for('static', filename='images/WHH.png') }}" class="img-fluid" alt="YouTube Channel">
+                </a>
+            </div>
+        </div>
+        <a href="https://www.youtube.com/your-channel-link" class="btn btn-primary" target="_blank" data-toggle="tooltip" title="Visit our YouTube channel">Visit YouTube Channel</a>
     </div>
 </div>
 {% endblock %}

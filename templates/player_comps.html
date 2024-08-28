@@ -16,14 +16,14 @@
                     <tr>
                         <th>Historical Player</th>
                         <th>Current Player</th>
+                        <th>SCORE</th>
+                        <th>Season</th>
                         <th>Age</th>
                         <th>Position</th>
                         <th>Height</th>
                         <th>Weight</th>
                         <th>Draft Year</th>
                         <th>Pick Number</th>
-                        <th>SCORE</th>
-                        <th>Season</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -50,14 +50,14 @@ $(document).ready(function() {
         "columns": [
             { "data": "Comparables" },
             { "data": "name" },
+            { "data": "SCORE" },
+            { "data": "season" },
             { "data": "age" },
             { "data": "fw_def" },
             { "data": "Height" },
             { "data": "Weight" },
             { "data": "draft_year" },
-            { "data": "pick_number" },
-            { "data": "SCORE" },
-            { "data": "season" }
+            { "data": "pick_number" }
         ],
         "paging": true,
         "pageLength": 15,

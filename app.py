@@ -1,34 +1,27 @@
+<<<<<<< HEAD
 #!/usr/bin/env python3
 import flask
 import flask_login
+=======
+#!usr/bin/env python3
+>>>>>>> 39daccd (reupload)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import pandas as pd
 import numpy as np
 import random
-import stripe
 import io
 import csv
-import gunicorn
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Stripe keys
-app.config['STRIPE_PUBLIC_KEY'] = 'your_stripe_publishable_key'
-app.config['STRIPE_SECRET_KEY'] = 'your_stripe_secret_key'
-
-stripe.api_key = app.config['STRIPE_SECRET_KEY']
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
 
 # Load the CSV data
-df_projections = pd.read_csv('KUBOTAPROJECTIONS.csv')
-df_comps = pd.read_csv('KUBOTACOMPS.csv')
-df_logos = pd.read_csv('playerteams.csv')
-df_final_projections = pd.read_csv('FINALNHLPLAYERPROJECTIONS.csv')
+df_projections = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTAPROJECTIONS.csv')
+df_comps = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTACOMPS.csv')
+df_logos = pd.read_csv('C:/Users/brennan/Kubota Website/playerteams.csv')
+df_final_projections = pd.read_csv('C:/Users/brennan/Kubota Website/FINALNHLPLAYERPROJECTIONS.csv')
 df_merged = df_projections.merge(df_logos[['URL', 'Team', 'Image']], left_on='link', right_on='URL', how='left')
 
 
@@ -41,17 +34,6 @@ users = {
     'nonpremium@example.com': {'password': 'password', 'premium': False}
 }
 
-class User(UserMixin):
-    def __init__(self, email):
-        self.id = email
-        self.email = email
-        self.premium = users[email]['premium']
-
-@login_manager.user_loader
-def load_user(email):
-    if email not in users:
-        return None
-    return User(email)
 
 @app.route('/')
 def home():
@@ -216,21 +198,13 @@ def contact():
     return render_template('contact.html')
 
 @app.route('/player')
-@login_required
 def player_page():
-    if not current_user.premium:
-        flash('You need a premium membership to access this page.', 'danger')
-        return redirect(url_for('upgrade'))
     players = df_projections['name'].tolist()
     random_player = request.args.get('player', random.choice(players))
     return render_template('player.html', players=players, random_player=random_player)
 
 @app.route('/get_player_data', methods=['POST'])
-@login_required
 def get_player_data():
-    if not current_user.premium:
-        return jsonify({'error': 'Premium membership required'}), 403
-
     player_name = request.form['player_name']
     projection_data = df_projections[df_projections['name'] == player_name].to_dict(orient='records')
     if not projection_data:
@@ -240,6 +214,7 @@ def get_player_data():
     comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')  # Replace NA with 0
     image_link = df_logos[df_logos['URL'] == anchor]['Image'].values[0]
     return jsonify({'projection': projection_data, 'comps': comps_data,'image_link': image_link})
+
 
 @app.route('/player_comps')
 def player_comps():
@@ -260,7 +235,9 @@ def api_player_comps():
 
     # Sort by SCORE
     merged_df = merged_df.sort_values(by='SCORE', ascending=False)
-
+    
+    merged_df['SCORE'] = merged_df['SCORE'].round(0)
+    
     total_records = len(merged_df)
     filtered_comps = merged_df.iloc[start:start + length].to_dict(orient='records')
 
@@ -299,12 +276,9 @@ def teams_overview():
     pts_projections = team_players[[f'PT_Y{y}' for y in range(1, 8)]].mean().tolist() if not team_players.empty else []
     
     # League-wide projections (same method)
-    league_pts_projections = df_merged.groupby('Team')[[f'TOTPT_Y{y}' for y in range(1, 8)]].sum()
-    league_games_played = df_merged.groupby('Team')[[f'GPY{y}' for y in range(1, 8)]].sum()
-    
-    for y in range(1, 8):
-        league_pts_projections[f'PT_Y{y}'] = league_pts_projections[f'TOTPT_Y{y}'] / league_games_played[f'GPY{y}']
+    league_pts_projections = df_merged.groupby('Team')[[f'PT_Y{y}' for y in range(1, 8)]].mean()
 
+    # Determine the highest and lowest projections for each year across all teams
     top_team_projections = league_pts_projections[[f'PT_Y{y}' for y in range(1, 8)]].max().tolist()
     lowest_team_projections = league_pts_projections[[f'PT_Y{y}' for y in range(1, 8)]].min().tolist()
     league_average_projections = league_pts_projections[[f'PT_Y{y}' for y in range(1, 8)]].mean().tolist()
@@ -373,6 +347,7 @@ def teams_overview():
                            top_6_def_rank=int(top_6_def_rank),
                            fw_rank_under_23=int(fw_rank_under_23),
                            def_rank_under_23=int(def_rank_under_23))
+
 
 
 
@@ -472,6 +447,4 @@ def upgrade_success():
 
 
 if __name__ == '__main__':
-    pass
-
-
+    app.run(debug=True, use_reloader=False)
