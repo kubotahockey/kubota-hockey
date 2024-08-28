@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-#!/usr/bin/env python3
-import flask
-import flask_login
-=======
 #!usr/bin/env python3
->>>>>>> 39daccd (reupload)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 import pandas as pd
 import numpy as np
@@ -371,79 +365,6 @@ def inject_team_rankings():
     return dict(teams_ranked=teams_ranked)
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        if email in users and users[email]['password'] == password:
-            user = User(email)
-            login_user(user)
-            flash('Logged in successfully.', 'success')
-            return redirect(url_for('home'))
-        flash('Invalid email or password.', 'danger')
-    return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('home'))
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        if email in users:
-            flash('Email already registered.', 'danger')
-        else:
-            users[email] = {'password': password, 'premium': False}
-            flash('Registration successful. Please log in.', 'success')
-            return redirect(url_for('login'))
-    return render_template('register.html')
-
-@app.route('/upgrade')
-@login_required
-def upgrade():
-    if request.method == 'POST':
-        try:
-            # Create a new Stripe checkout session
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {
-                            'name': 'Premium Membership',
-                        },
-                        'unit_amount': 999,  # Price in cents
-                    },
-                    'quantity': 1,
-                }],
-                mode='payment',
-                success_url=url_for('upgrade_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=url_for('upgrade', _external=True),
-            )
-            return redirect(session.url, code=303)
-        except Exception as e:
-            flash(str(e), 'danger')
-            return redirect(url_for('upgrade'))
-
-    return render_template('upgrade.html', key=app.config['STRIPE_PUBLIC_KEY'])
-
-@login_required
-def upgrade_success():
-    session_id = request.args.get('session_id')
-    session = stripe.checkout.Session.retrieve(session_id)
-
-    # Update user to premium in your database
-    current_user.premium = True
-    # Add logic to save this change to your database
-
-    flash('Your account has been upgraded to premium!', 'success')
-    return redirect(url_for('home'))
 
 
 if __name__ == '__main__':
