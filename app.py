@@ -374,4 +374,4 @@ def inject_team_rankings():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    pass
