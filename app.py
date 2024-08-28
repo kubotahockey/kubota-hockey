@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-#!/usr/bin/env python3
-import flask
-import flask_login
-=======
 #!usr/bin/env python3
->>>>>>> 39daccd (reupload)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 import pandas as pd
 import numpy as np
