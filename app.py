@@ -12,10 +12,10 @@ app.secret_key = 'your_secret_key'
 
 
 # Load the CSV data
-df_projections = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTAPROJECTIONS.csv')
-df_comps = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTACOMPS.csv')
-df_logos = pd.read_csv('C:/Users/brennan/Kubota Website/playerteams.csv')
-df_final_projections = pd.read_csv('C:/Users/brennan/Kubota Website/FINALNHLPLAYERPROJECTIONS.csv')
+df_projections = pd.read_csv('KUBOTAPROJECTIONS.csv')
+df_comps = pd.read_csv('KUBOTACOMPS.csv')
+df_logos = pd.read_csv('playerteams.csv')
+df_final_projections = pd.read_csv('FINALNHLPLAYERPROJECTIONS.csv')
 df_merged = df_projections.merge(df_logos[['URL', 'Team', 'Image']], left_on='link', right_on='URL', how='left')
 
 
@@ -379,4 +379,4 @@ def inject_team_rankings():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    pass
