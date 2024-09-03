@@ -12,21 +12,17 @@ app.secret_key = 'your_secret_key'
 
 
 # Load the CSV data
-df_projections = pd.read_csv('KUBOTAPROJECTIONS.csv')
-df_comps = pd.read_csv('KUBOTACOMPS.csv')
-df_logos = pd.read_csv('playerteams.csv')
-df_final_projections = pd.read_csv('FINALNHLPLAYERPROJECTIONS.csv')
+df_projections = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTAPROJECTIONS.csv')
+df_comps = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTACOMPS.csv')
+df_logos = pd.read_csv('C:/Users/brennan/Kubota Website/playerteams.csv')
+df_final_projections = pd.read_csv('C:/Users/brennan/Kubota Website/FINALNHLPLAYERPROJECTIONS.csv')
 df_merged = df_projections.merge(df_logos[['URL', 'Team', 'Image']], left_on='link', right_on='URL', how='left')
 
 
 df_final_projections['Pos'] = df_final_projections['Pos'].replace('W', 'RW')  # Default 'W' to 'RW'
 df_final_projections['Pos'] = df_final_projections['Pos'].replace('F', 'C')   # Default 'F' to 'C'
 
-# Dummy user data
-users = {
-    'user@example.com': {'password': 'password', 'premium': True},
-    'nonpremium@example.com': {'password': 'password', 'premium': False}
-}
+
 
 
 @app.route('/')
@@ -65,6 +61,8 @@ def currentyear():
 @app.route('/calculate_fantasy_points', methods=['POST'])
 def calculate_fantasy_points():
     try:
+        print("POST request received")
+        
         # Get the league type (points or categories)
         league_type = request.form.get('league_type', 'points')
 
@@ -77,7 +75,7 @@ def calculate_fantasy_points():
         ppg_points = float(request.form.get('ppg_points', 2))
         ppa_points = float(request.form.get('ppa_points', 2))
         shg_points = float(request.form.get('shg_points', 0))
-        sha_points = float(request.form.get('sha_points',0))
+        sha_points = float(request.form.get('sha_points', 0))
         blk_points = float(request.form.get('blk_points', 1))
         hit_points = float(request.form.get('hit_points', 0))
         fol_points = float(request.form.get('fol_points', 0))
@@ -107,19 +105,24 @@ def calculate_fantasy_points():
                 df_selected['FOL_GP'] * df_selected['GP'] * fol_points +
                 df_selected['FOW_GP'] * df_selected['GP'] * fow_points
             )
-        # Categories League: Calculate standard deviation above/below mean
+        # Categories League: Calculate standard deviation above/below mean on totals
         elif league_type == 'categories':
             category_columns = ['G_GP', 'A_GP', 'SOG_GP', 'PIM_GP', 'PLUSMINUS_GP', 'PPG', 'PPA', 'SHG', 'SHA', 'BLK_GP', 'HIT_GP', 'FOL_GP', 'FOW_GP']
             df_selected['FantasyPoints'] = 0  # Initialize the column
-            
-            for column, multiplier in zip(category_columns, [
+
+            # Calculate totals based on GP
+            for column in category_columns:
+                df_selected[column + '_Total'] = df_selected[column] * df_selected['GP']
+
+            # Calculate FantasyPoints based on standard deviation from mean for totals
+            for column, multiplier in zip([col + '_Total' for col in category_columns], [
                 g_points, a_points, sog_points, pim_points, plusminus_points, ppg_points, ppa_points,
                 shg_points, sha_points, blk_points, hit_points, fol_points, fow_points
             ]):
                 if multiplier != 0:
                     mean = df_selected[column].mean()
                     std_dev = df_selected[column].std()
-                    df_selected['FantasyPoints'] += (df_selected[column] - mean) / std_dev
+                    df_selected['FantasyPoints'] += ((df_selected[column] - mean) / std_dev) * multiplier
 
         # Sort by FantasyPoints descending
         df_selected = df_selected.sort_values(by='FantasyPoints', ascending=False)
@@ -128,9 +131,10 @@ def calculate_fantasy_points():
         rows_html = ''
         for index, row in df_selected.iterrows():
             rows_html += f'<tr>'
+            rows_html += f'<td>{index + 1}</td>'  # Add ranking number
             rows_html += f'<td>{row["name"]}</td>'
             rows_html += f'<td>{row["team"]}</td>'
-            rows_html += f'<td>{row["Pos"]}</td>'
+            rows_html += f'<td data-key="Pos">{row["Pos"].replace("LW", "Left Wing").replace("RW", "Right Wing").replace("C", "Center").replace("D", "Defense")}</td>'
             rows_html += f'<td>{round(row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["G_GP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["A_GP"] * row["GP"], 2)}</td>'
@@ -149,11 +153,13 @@ def calculate_fantasy_points():
             rows_html += f'<td>{round(row["FantasyPoints"], 2)}</td>'
             rows_html += f'</tr>'
 
+        print("Returning HTML rows")
         return rows_html
 
     except Exception as e:
-        print(f"Error: {e}")
-        return "An error occurred during the calculation.", 500
+        error_message = f"An error occurred during the calculation: {str(e)}"
+        print(error_message)
+        return error_message, 500
     
 @app.route('/export_csv', methods=['POST'])
 def export_csv():
@@ -183,6 +189,9 @@ def export_csv():
         print(f"Error: {e}")
         return "An error occurred during the CSV export.", 500
 
+
+
+
 @app.route('/about')
 def about():
     return render_template('about.html')
@@ -204,16 +213,10 @@ def get_player_data():
     if not projection_data:
         return jsonify({'error': 'No data found for this player.'}), 404
 
-    try:
-        anchor = df_projections[df_projections['name'] == player_name]['anchor'].values[0]
-        if anchor not in df_comps['anchor'].values:
-            return jsonify({'error': 'No comparables found for this player.'}), 404
-        comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')
-        image_link = df_logos[df_logos['URL'] == anchor]['Image'].values[0]
-        return jsonify({'projection': projection_data, 'comps': comps_data, 'image_link': image_link})
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'error': 'An unexpected error occurred.'}), 500
+    anchor = df_projections[df_projections['name'] == player_name]['anchor'].values[0]
+    comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')  # Replace NA with 0
+    image_link = df_logos[df_logos['URL'] == anchor]['Image'].values[0]
+    return jsonify({'projection': projection_data, 'comps': comps_data,'image_link': image_link})
 
 
 @app.route('/player_comps')
@@ -355,12 +358,16 @@ def teams_overview():
 def inject_team_rankings():
     # Group by team and sum the points
     team_rankings = df_merged.groupby('Team').agg({
-        'PTS': 'sum',
+        'PTSTOT': 'sum',
+        'GP2':'sum',
         'Image': 'first'  # Get the first image for each team
     }).reset_index()
     
+    team_rankings['PTSPERG']= team_rankings['PTSTOT'] / team_rankings['GP2']
+
+    
     # Sort teams by total points in descending order
-    team_rankings = team_rankings.sort_values(by='PTS', ascending=False)
+    team_rankings = team_rankings.sort_values(by='PTSPERG', ascending=False).round(3)
     
     # Add a rank column
     team_rankings['Rank'] = range(1, len(team_rankings) + 1)
@@ -371,7 +378,5 @@ def inject_team_rankings():
     return dict(teams_ranked=teams_ranked)
 
 
-
-
 if __name__ == '__main__':
-    pass
+    app.run(debug=True, use_reloader=False)

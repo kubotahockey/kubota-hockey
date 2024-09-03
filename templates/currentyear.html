@@ -16,7 +16,7 @@ Current Year Player Stats - KUBOTA HOCKEY
         <p><strong>Games Played Settings:</strong></p>
         <ul>
             <li><strong>82 Games:</strong> Assumes every player will play the full season (82 games), putting everyone on the same level.</li>
-            <li><strong>GP Projection):</strong> Considers historical missed games and injuries, providing a more cautious projection for each player.</li>
+            <li><strong>GP Projection:</strong> Considers historical missed games and injuries, providing a more cautious projection for each player.</li>
         </ul>
     </div>
     
@@ -135,30 +135,34 @@ Current Year Player Stats - KUBOTA HOCKEY
         </div>
     </form>
 
+    <!-- Search bar for filtering -->
+    <input type="text" id="search-bar" class="form-control mb-3" placeholder="Search for players, teams positions...">
+
     <!-- Table for displaying results -->
     <div id="player-data" class="table-responsive">
-        <table class="table table-hover table-custom">
+        <table class="table table-hover table-custom" id="player-table">
             <thead>
                 <tr>
-                    <th>Player</th>
-                    <th>Team</th>
-                    <th>Position</th>
-                    <th>GP</th>
-                    <th>G</th>
-                    <th>A</th>
-                    <th>PTS</th>
-                    <th>SOG</th>
-                    <th>PIM</th>
-                    <th>+/-</th>
-                    <th>PPG</th>
-                    <th>PPA</th>
-                    <th>SHG</th>
-                    <th>SHA</th>
-                    <th>BLK</th>
-                    <th>HIT</th>
-                    <th>FOL</th>
-                    <th>FOW</th>
-                    <th>Fantasy Points</th>
+                    <th>Rank</th>
+                    <th data-sort="name">Player</th>
+                    <th data-sort="team">Team</th>
+                    <th data-sort="Pos">Position</th>
+                    <th data-sort="GP">GP</th>
+                    <th data-sort="G_GP">G</th>
+                    <th data-sort="A_GP">A</th>
+                    <th data-sort="PTS_GP">PTS</th>
+                    <th data-sort="SOG_GP">SOG</th>
+                    <th data-sort="PIM_GP">PIM</th>
+                    <th data-sort="PLUSMINUS_GP">+/-</th>
+                    <th data-sort="PPG">PPG</th>
+                    <th data-sort="PPA">PPA</th>
+                    <th data-sort="SHG">SHG</th>
+                    <th data-sort="SHA">SHA</th>
+                    <th data-sort="BLK_GP">BLK</th>
+                    <th data-sort="HIT_GP">HIT</th>
+                    <th data-sort="FOL_GP">FOL</th>
+                    <th data-sort="FOW_GP">FOW</th>
+                    <th data-sort="FantasyPoints">Fantasy Points</th>
                 </tr>
             </thead>
             <tbody id="table-body">
@@ -168,5 +172,5 @@ Current Year Player Stats - KUBOTA HOCKEY
     </div>
 </div>
 
-
 {% endblock %}
+

@@ -10,6 +10,8 @@ $(document).ready(function() {
             data: formData,
             success: function(response) {
                 $('#table-body').html(response);  // Inject the returned rows into the table body
+                applyRanking();
+                applySearch();
             },
             error: function(error) {
                 console.error("Error calculating fantasy points:", error);
@@ -92,4 +94,56 @@ $(document).ready(function() {
             $('#fow-points').val(0);
         }
     });
+
+    // Apply sortable functionality to table headers
+    $('#player-table thead th[data-sort]').on('click', function() {
+        const sortKey = $(this).data('sort');
+        const rows = $('#table-body tr').get();
+        const isNumeric = $(this).data('numeric') || false;
+
+        rows.sort(function(a, b) {
+            const keyA = $(a).find(`td[data-key="${sortKey}"]`).text().toUpperCase();
+            const keyB = $(b).find(`td[data-key="${sortKey}"]`).text().toUpperCase();
+
+            if (isNumeric) {
+                return parseFloat(keyA) - parseFloat(keyB);
+            } else {
+                if (keyA < keyB) return -1;
+                if (keyA > keyB) return 1;
+                return 0;
+            }
+        });
+
+        // Toggle sort direction on subsequent clicks
+        if ($(this).hasClass('ascending')) {
+            rows.reverse();
+            $(this).removeClass('ascending').addClass('descending');
+        } else {
+            $(this).removeClass('descending').addClass('ascending');
+        }
+
+        // Append sorted rows back to the table body
+        $.each(rows, function(index, row) {
+            $('#table-body').append(row);
+        });
+
+        applyRanking();
+    });
+
+    // Apply search functionality
+    $('#search-bar').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('#table-body tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1);
+        });
+
+        applyRanking();
+    });
+
+    // Apply ranking to the first column
+    function applyRanking() {
+        $('#table-body tr').each(function(index) {
+            $(this).find('td:first').text(index + 1);
+        });
+    }
 });

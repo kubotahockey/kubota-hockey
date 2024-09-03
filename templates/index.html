@@ -17,6 +17,7 @@
         </div>
         <div class="row">
             <div class="col-md-12 mb-4">
+                <img src="{{ url_for('static', filename='images/currentyear.png') }}" class="img-fluid" alt="NHL Team Insights">
             </div>
         </div>
         <a href="{{ url_for('currentyear') }}" class="btn btn-primary" data-toggle="tooltip" title="View current year projections">View Skater Projections</a>
@@ -29,9 +30,8 @@
             <p>Access individual player cards for over 2,000 players from across the globe. The player dashboard provides the players 7 year projection plotted alongside their top 3 historical comparables, their top 10 player comparables, and percentile rankings.</p>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-4">
-            </div>
-            <div class="col-md-6 mb-4">
+            <div class="col-md-12 mb-4">
+                <img src="{{ url_for('static', filename='images/playerpage.png') }}" class="img-fluid" alt="NHL Team Insights">
             </div>
         </div>
         <a href="{{ url_for('player_page') }}" class="btn btn-primary mb-4" data-toggle="tooltip" title="View individual player stats">View Player Page</a>
@@ -44,6 +44,7 @@
         </div>
         <div class="row">
             <div class="col-md-12 mb-4">
+                        <img src="{{ url_for('static', filename='images/sevenyear.png') }}" class="img-fluid" alt="NHL Team Insights">
             </div>
         </div>
         <a href="{{ url_for('forecasts') }}" class="btn btn-primary" data-toggle="tooltip" title="View detailed forecasts for hockey players">View Projections</a>
@@ -56,6 +57,7 @@
         </div>
         <div class="row">
             <div class="col-md-12 mb-4">
+                <img src="{{ url_for('static', filename='images/teampage.png') }}" class="img-fluid" alt="NHL Team Insights">
             </div>
         </div>
         <a href="/teams?team=Calgary+Flames" class="btn btn-primary" data-toggle="tooltip" title="View detailed insights for NHL teams">View Team Insights</a>

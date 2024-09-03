@@ -617,6 +617,20 @@ table.table tbody tr td a:hover {
 }
 
 
+.table-custom tbody tr:nth-child(odd) {
+    background-color: #495057;
+}
+.table-custom tbody tr:nth-child(even) {
+    background-color: #343a40;
+}
+
+/* styles.css */
+.section-heading {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
 
 
 

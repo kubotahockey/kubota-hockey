@@ -8,7 +8,7 @@
     <div class="col-md-3">
         <div class="card bg-dark text-light mb-4">
             <div class="card-header">
-                <h4 class="text-white mb-0">Team Rankings</h4>
+                <h4 class="text-white mb-0">7 Year Rank (PTS/GP)</h4>
             </div>
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
@@ -20,7 +20,7 @@
                                  class="team-logo-sm mr-2">
                             <div class="d-flex flex-column">
                                 <span>{{ team['Rank'] }}. {{ team['Team'] }}</span>
-                                <span class="text-muted">{{ team['PTS'] | default(0) | round }} Points</span>
+                                <span class="text-muted">{{ team['PTSPERG']}} Points</span>
                             </div>
                         </a>
                     </li>
@@ -39,7 +39,7 @@
                  class="team-logo mr-3">
             <h1>{{ team_name }}: 7 Year Outlook</h1>
         </div>
-
+        
         <!-- 7 Year Projection Chart -->
         <div class="row mb-4">
             <div class="col-md-12">
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Bar Chart Data and Options
     const rankingData = {
-        labels: ['Total Team', 'Forwards', 'Defensemen', 'Top 12 FWs', 'Top 6 DEFs', 'FWs U23', 'DEFs U23'],
+        labels: ['Total System', 'All FW', 'All DEF', 'Top 12 FW', 'Top 6 DEF', 'U23 FW', 'U23 DEF'],
         datasets: [{
             data: [32 - {{ total_team_rank }},
                    32 - {{ fw_rank }},
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
             borderWidth: 2
         }]
     };
-
+    
     const rankingOptions = {
         indexAxis: 'y',
         scales: {
@@ -148,10 +148,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         return `Rank: ${32 - tooltipItem.raw}`;
                     }
                 }
+            },
+            title: {  // Adding the title plugin
+                display: true,
+                text: 'System 7 Year Rankings per Category',
+                color: 'white',
+                font: {
+                    size: 18
+                }
             }
         }
     };
-
+    
     new Chart(rankingCtx, {
         type: 'bar',
         data: rankingData,
@@ -177,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 {
                     label: 'Top Team Projections',
                     data: {{ top_team_projections }},
-                    borderColor: 'rgba(54, 162, 235, 1)', // Blue
+                    borderColor: 'rgba(255, 255, 0, 1)', // Yellow
                     borderWidth: 1,
                     fill: false,
                     tension: 0.4,
@@ -189,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 {
                     label: 'Lowest Team Projections',
                     data: {{ lowest_team_projections }},
-                    borderColor: 'rgba(255, 99, 132, 1)', // Red
+                    borderColor: 'rgba(255, 105, 97, 1)', // Red
                     borderWidth: 1,
                     fill: false,
                     tension: 0.4,
@@ -201,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 {
                     label: 'League Average Projections',
                     data: {{ league_average_projections }},
-                    borderColor: 'rgba(153, 102, 255, 1)', // Purple
+                    borderColor: 'rgba(255, 179, 71, 1)', // Orange
                     borderWidth: 1,
                     fill: false,
                     tension: 0.4,

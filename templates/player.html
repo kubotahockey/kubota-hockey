@@ -4,20 +4,50 @@
 {% block content %}
 <div class="container-fluid">
     <h1 class="text-center text-white mb-4"><i class="fas fa-user"></i> Player Dashboard</h1>
+
+    <!-- General information at the top -->
+    <p class="text-center text-light mb-4">
+        All stats are adjusted to be NHL equivalent (NHLe) to place everyone on the same level for comparison purposes. This is how players would hypothetically perform at the NHL level over the next 7 seasons.
+    </p>
+
+    <!-- Player search section -->
     <div class="form-group text-center">
         <label for="playerSearch" class="text-white">Search for a Player:</label>
         <input type="text" class="form-control bg-dark text-light mx-auto" id="playerSearch" placeholder="Enter player name..." title="Type to search for a player" style="max-width: 500px;">
         <ul class="list-group bg-dark mt-2 mx-auto" id="searchResults" style="max-width: 500px;"></ul>
     </div>
+
+    <!-- Player chart section -->
     <div class="row mb-4">
+        <div class="col-sm-12">
+            <p class="text-center text-light">7-year forecast plotted alongside the player's top 3 historical comparable players</p>
+        </div>
         <div class="col-sm-4" id="playerStats"></div>
         <div class="col-sm-8" id="playerChart"></div>
     </div>
-    <div id="playerProjections" class="row mb-4"></div>
 
-    <div id="playerPercentiles" class="row mb-4"></div>
+    <!-- Player projections section -->
+    <div class="row mb-4">
+        <div class="col-sm-12">
+            <h4 class="text-center text-light mt-3 mb-3">Raw NHLe stat projections over the next 7 years<h4>
+        </div>
+        <div id="playerProjections" class="col-sm-12"></div>
+    </div>
+    
+    <!-- Player percentiles section -->
+    <div class="row mb-4">
+        <div class="col-sm-12">
+            <h4 class="text-center text-light mt-3 mb-3">Per game percentiles over the next 7 seasons</h4>
+        </div>
+        <div id="playerPercentiles" class="col-sm-12"></div>
+    </div>
 
+
+    <!-- Player comparables section -->
     <h2 class="text-center text-white mt-4">Player Comparables</h2>
+    <div class="col-sm-12 mb-4">
+        <p class="text-center text-light">Top 10 comparables with their NHLe stats over the next 7 year timeframe</p>
+    </div>
     <div id="playerComparisons" class="row mt-4"></div>
     
 </div>
