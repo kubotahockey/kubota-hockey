@@ -12,10 +12,10 @@ app.secret_key = 'your_secret_key'
 
 
 # Load the CSV data
-df_projections = pd.read_csv('KUBOTAPROJECTIONS.csv')
-df_comps = pd.read_csv('KUBOTACOMPS.csv')
-df_logos = pd.read_csv('playerteams.csv')
-df_final_projections = pd.read_csv('FINALNHLPLAYERPROJECTIONS.csv')
+df_projections = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTAPROJECTIONS.csv')
+df_comps = pd.read_csv('C:/Users/brennan/Kubota Website/KUBOTACOMPS.csv')
+df_logos = pd.read_csv('C:/Users/brennan/Kubota Website/playerteams.csv')
+df_final_projections = pd.read_csv('C:/Users/brennan/Kubota Website/FINALNHLPLAYERPROJECTIONS.csv')
 df_merged = df_projections.merge(df_logos[['URL', 'Team', 'Image']], left_on='link', right_on='URL', how='left')
 
 
@@ -65,21 +65,31 @@ def calculate_fantasy_points():
         
         # Get the league type (points or categories)
         league_type = request.form.get('league_type', 'points')
+        
+        # Get position grouping (detailed or split)
+        position_grouping = request.form.get('position_grouping', 'detailed')
 
-        # Get the settings
-        g_points = float(request.form.get('g_points', 6))
-        a_points = float(request.form.get('a_points', 4))
-        sog_points = float(request.form.get('sog_points', 0.9))
-        pim_points = float(request.form.get('pim_points', 0))
-        plusminus_points = float(request.form.get('plusminus_points', 2))
-        ppg_points = float(request.form.get('ppg_points', 2))
-        ppa_points = float(request.form.get('ppa_points', 2))
-        shg_points = float(request.form.get('shg_points', 0))
-        sha_points = float(request.form.get('sha_points', 0))
-        blk_points = float(request.form.get('blk_points', 1))
-        hit_points = float(request.form.get('hit_points', 0))
-        fol_points = float(request.form.get('fol_points', 0))
-        fow_points = float(request.form.get('fow_points', 0))
+        # Get the settings for scoring multipliers
+        scoring_settings = {
+            'G': float(request.form.get('g_points', 6)),
+            'A': float(request.form.get('a_points', 4)),
+            'SOG': float(request.form.get('sog_points', 0.9)),
+            'PIM': float(request.form.get('pim_points', 0)),
+            'PLUSMINUS': float(request.form.get('plusminus_points', 2)),
+            'PPG': float(request.form.get('ppg_points', 2)),
+            'PPA': float(request.form.get('ppa_points', 2)),
+            'PPP': float(request.form.get('ppp_points', 2)),
+            'SHG': float(request.form.get('shg_points', 0)),
+            'SHA': float(request.form.get('sha_points', 0)),
+            'SHP': float(request.form.get('shp_points', 0)),
+            'BLK': float(request.form.get('blk_points', 1)),
+            'HIT': float(request.form.get('hit_points', 0)),
+            'FOL': float(request.form.get('fol_points', 0)),
+            'FOW': float(request.form.get('fow_points', 0)),
+        }
+
+        # Get the defensive points multiplier (for DMEN only)
+        defensive_points_multiplier = float(request.form.get('defensive_points', 1))
 
         # Apply season length
         df_selected = df_final_projections.copy()
@@ -88,41 +98,54 @@ def calculate_fantasy_points():
         else:
             df_selected['GP'] = df_selected['GPNEW']
 
+        # Calculate PPP and SHP columns
+        df_selected['PPP'] = df_selected['PPG'] + df_selected['PPA']
+        df_selected['SHP'] = df_selected['SHG'] + df_selected['SHA']
+
         # Points League: Calculate fantasy points
         if league_type == 'points':
-            df_selected['FantasyPoints'] = (
-                df_selected['G_GP'] * df_selected['GP'] * g_points +
-                df_selected['A_GP'] * df_selected['GP'] * a_points +
-                df_selected['SOG_GP'] * df_selected['GP'] * sog_points +
-                df_selected['PIM_GP'] * df_selected['GP'] * pim_points +
-                df_selected['PLUSMINUS_GP'] * df_selected['GP'] * plusminus_points +
-                df_selected['PPG'] * df_selected['GP'] * ppg_points +
-                df_selected['PPA'] * df_selected['GP'] * ppa_points +
-                df_selected['SHG'] * df_selected['GP'] * shg_points +
-                df_selected['SHA'] * df_selected['GP'] * sha_points +
-                df_selected['BLK_GP'] * df_selected['GP'] * blk_points +
-                df_selected['HIT_GP'] * df_selected['GP'] * hit_points +
-                df_selected['FOL_GP'] * df_selected['GP'] * fol_points +
-                df_selected['FOW_GP'] * df_selected['GP'] * fow_points
-            )
-        # Categories League: Calculate standard deviation above/below mean on totals
+            df_selected['FantasyPoints'] = 0
+            for index, row in df_selected.iterrows():
+                # Apply regular fantasy point calculations
+                df_selected.at[index, 'FantasyPoints'] = (
+                    row['G_GP'] * row['GP'] * scoring_settings['G'] +
+                    row['A_GP'] * row['GP'] * scoring_settings['A'] +
+                    row['SOG_GP'] * row['GP'] * scoring_settings['SOG'] +
+                    row['PIM_GP'] * row['GP'] * scoring_settings['PIM'] +
+                    row['PLUSMINUS_GP'] * row['GP'] * scoring_settings['PLUSMINUS'] +
+                    row['PPG'] * row['GP'] * scoring_settings['PPG'] +
+                    row['PPA'] * row['GP'] * scoring_settings['PPA'] +
+                    row['PPP'] * row['GP'] * scoring_settings['PPP'] +
+                    row['SHG'] * row['GP'] * scoring_settings['SHG'] +
+                    row['SHA'] * row['GP'] * scoring_settings['SHA'] +
+                    row['SHP'] * row['GP'] * scoring_settings['SHP'] +
+                    row['BLK_GP'] * row['GP'] * scoring_settings['BLK'] +
+                    row['HIT_GP'] * row['GP'] * scoring_settings['HIT'] +
+                    row['FOL_GP'] * row['GP'] * scoring_settings['FOL'] +
+                    row['FOW_GP'] * row['GP'] * scoring_settings['FOW']
+                )
+
+                # If the player is a defenseman, apply the defensive points multiplier
+                if row['Pos'] == 'D':  # For defensemen only
+                    defense_points = (row['G_GP'] * row['GP'] + row['A_GP'] * row['GP']) * defensive_points_multiplier
+                    df_selected.at[index, 'FantasyPoints'] += defense_points
+
+        # Categories League: Calculate standard deviation above/below mean for each category
         elif league_type == 'categories':
-            category_columns = ['G_GP', 'A_GP', 'SOG_GP', 'PIM_GP', 'PLUSMINUS_GP', 'PPG', 'PPA', 'SHG', 'SHA', 'BLK_GP', 'HIT_GP', 'FOL_GP', 'FOW_GP']
-            df_selected['FantasyPoints'] = 0  # Initialize the column
+            category_columns = ['G_GP', 'A_GP', 'SOG_GP', 'PIM_GP', 'PLUSMINUS_GP', 'PPG', 'PPA', 'PPP', 'SHG', 'SHA', 'SHP', 'BLK_GP', 'HIT_GP', 'FOL_GP', 'FOW_GP']
+            df_selected['FantasyPoints'] = 0  # Initialize the FantasyPoints column
 
             # Calculate totals based on GP
             for column in category_columns:
                 df_selected[column + '_Total'] = df_selected[column] * df_selected['GP']
 
-            # Calculate FantasyPoints based on standard deviation from mean for totals
-            for column, multiplier in zip([col + '_Total' for col in category_columns], [
-                g_points, a_points, sog_points, pim_points, plusminus_points, ppg_points, ppa_points,
-                shg_points, sha_points, blk_points, hit_points, fol_points, fow_points
-            ]):
-                if multiplier != 0:
-                    mean = df_selected[column].mean()
-                    std_dev = df_selected[column].std()
-                    df_selected['FantasyPoints'] += ((df_selected[column] - mean) / std_dev) * multiplier
+            # Calculate FantasyPoints based on standard deviation from the mean
+            for column in category_columns:
+                mean = df_selected[column + '_Total'].mean()
+                std_dev = df_selected[column + '_Total'].std()
+                multiplier = scoring_settings[column.replace('_GP', '')]  # Remove _GP to match with scoring settings
+                if multiplier != 0 and std_dev != 0:  # Avoid division by zero
+                    df_selected['FantasyPoints'] += ((df_selected[column + '_Total'] - mean) / std_dev) * multiplier
 
         # Sort by FantasyPoints descending
         df_selected = df_selected.sort_values(by='FantasyPoints', ascending=False)
@@ -134,7 +157,7 @@ def calculate_fantasy_points():
             rows_html += f'<td>{index + 1}</td>'  # Add ranking number
             rows_html += f'<td>{row["name"]}</td>'
             rows_html += f'<td>{row["team"]}</td>'
-            rows_html += f'<td data-key="Pos">{row["Pos"].replace("LW", "Left Wing").replace("RW", "Right Wing").replace("C", "Center").replace("D", "Defense")}</td>'
+            rows_html += f'<td>{row["Pos"].replace("LW", "Left Wing").replace("RW", "Right Wing").replace("C", "Center").replace("D", "Defense")}</td>'
             rows_html += f'<td>{round(row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["G_GP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["A_GP"] * row["GP"], 2)}</td>'
@@ -144,8 +167,10 @@ def calculate_fantasy_points():
             rows_html += f'<td>{round(row["PLUSMINUS_GP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["PPG"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["PPA"] * row["GP"], 2)}</td>'
+            rows_html += f'<td>{round(row["PPP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["SHG"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["SHA"] * row["GP"], 2)}</td>'
+            rows_html += f'<td>{round(row["SHP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["BLK_GP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["HIT_GP"] * row["GP"], 2)}</td>'
             rows_html += f'<td>{round(row["FOL_GP"] * row["GP"], 2)}</td>'
@@ -160,6 +185,9 @@ def calculate_fantasy_points():
         error_message = f"An error occurred during the calculation: {str(e)}"
         print(error_message)
         return error_message, 500
+
+
+
     
 @app.route('/export_csv', methods=['POST'])
 def export_csv():
@@ -379,4 +407,4 @@ def inject_team_rankings():
 
 
 if __name__ == '__main__':
-    pass
+    app.run(debug=True, use_reloader=False)

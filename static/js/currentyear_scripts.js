@@ -1,9 +1,9 @@
 $(document).ready(function() {
     $('#scoring-settings-form').on('submit', function(e) {
         e.preventDefault();
-
+        
         let formData = $(this).serialize();  // Serialize form data
-
+        
         $.ajax({
             type: 'POST',
             url: '/calculate_fantasy_points',
@@ -64,35 +64,70 @@ $(document).ready(function() {
         
         if (leagueType === 'points') {
             // Set default values for Points League
-            $('#g-points').val(6);
-            $('#a-points').val(4);
-            $('#sog-points').val(1);
-            $('#pim-points').val(0);
-            $('#plusminus-points').val(2);
-            $('#ppg-points').val(2);
-            $('#ppa-points').val(2);
-            $('#shg-points').val(0);
-            $('#sha-points').val(0);
-            $('#blk-points').val(1);
-            $('#hit-points').val(0);
-            $('#fol-points').val(0);
-            $('#fow-points').val(0);
+            $('#g-points').val(6);         // Goals
+            $('#a-points').val(4);         // Assists
+            $('#sog-points').val(0.9);     // Shots on Goal
+            $('#pim-points').val(0);       // Penalty Minutes
+            $('#plusminus-points').val(2); // Plus/Minus
+            $('#ppg-points').val(2);       // Power Play Goals
+            $('#ppa-points').val(2);       // Power Play Assists
+            $('#ppp-points').val(2);       // Power Play Points (PPP)
+            $('#shg-points').val(0);       // Short-Handed Goals
+            $('#sha-points').val(0);       // Short-Handed Assists
+            $('#shp-points').val(0);       // Short-Handed Points (SHP)
+            $('#blk-points').val(1);       // Blocked Shots
+            $('#hit-points').val(0);       // Hits
+            $('#fol-points').val(0);       // Faceoff Losses
+            $('#fow-points').val(0);       // Faceoff Wins
+            $('#defensive-points').val(1); // Defensive Points Multiplier
         } else if (leagueType === 'categories') {
             // Set default values for Categories League (all 1 by default, indicating inclusion)
-            $('#g-points').val(1);
-            $('#a-points').val(1);
-            $('#sog-points').val(1);
-            $('#pim-points').val(0);
-            $('#plusminus-points').val(0);
-            $('#ppg-points').val(1);
-            $('#ppa-points').val(1);
-            $('#shg-points').val(0);
-            $('#sha-points').val(0);
-            $('#blk-points').val(0);
-            $('#hit-points').val(1);
-            $('#fol-points').val(0);
-            $('#fow-points').val(0);
+            $('#g-points').val(1);         // Goals
+            $('#a-points').val(1);         // Assists
+            $('#sog-points').val(1);       // Shots on Goal
+            $('#pim-points').val(0);       // Penalty Minutes
+            $('#plusminus-points').val(0); // Plus/Minus
+            $('#ppg-points').val(0);       // Power Play Goals
+            $('#ppa-points').val(0);       // Power Play Assists
+            $('#ppp-points').val(1);       // Power Play Points (PPP)
+            $('#shg-points').val(0);       // Short-Handed Goals
+            $('#sha-points').val(0);       // Short-Handed Assists
+            $('#shp-points').val(0);       // Short-Handed Points (SHP)
+            $('#blk-points').val(1);       // Blocked Shots
+            $('#hit-points').val(1);       // Hits
+            $('#fol-points').val(0);       // Faceoff Losses
+            $('#fow-points').val(0);       // Faceoff Wins
+            $('#defensive-points').val(0); // Defensive Points Multiplier
         }
+    });
+
+    // Handle dynamic roster settings based on position grouping
+    $('#position-grouping').on('change', function() {
+        const grouping = $(this).val();
+        if (grouping === 'fw_def') {
+            $('#roster-settings-split').hide();
+            $('#roster-settings-fwdef').show();
+        } else if (grouping === 'split') {
+            $('#roster-settings-split').show();
+            $('#roster-settings-fwdef').hide();
+        }
+    });
+
+    // Apply ranking and sorting
+    function applyRanking() {
+        $('#table-body tr').each(function(index) {
+            $(this).find('td:first').text(index + 1);
+        });
+    }
+    
+    // Apply search functionality
+    $('#search-bar').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('#table-body tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1);
+        });
+        
+        applyRanking();  // Reapply ranking after filtering
     });
 
     // Apply sortable functionality to table headers
@@ -127,23 +162,6 @@ $(document).ready(function() {
             $('#table-body').append(row);
         });
 
-        applyRanking();
+        applyRanking();  // Reapply ranking after sorting
     });
-
-    // Apply search functionality
-    $('#search-bar').on('keyup', function() {
-        const searchTerm = $(this).val().toLowerCase();
-        $('#table-body tr').filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1);
-        });
-
-        applyRanking();
-    });
-
-    // Apply ranking to the first column
-    function applyRanking() {
-        $('#table-body tr').each(function(index) {
-            $(this).find('td:first').text(index + 1);
-        });
-    }
 });

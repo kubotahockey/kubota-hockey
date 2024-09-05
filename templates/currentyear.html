@@ -21,7 +21,7 @@ Current Year Player Stats - KUBOTA HOCKEY
     </div>
     
     <form id="scoring-settings-form" class="mb-4">
-        <!-- First Row: Season Length and League Type -->
+    <!-- First Row: Season Length and League Type -->
         <div class="form-row">
             <div class="form-group col-sm-6 col-lg-2">
                 <label for="season-length">Season</label>
@@ -37,11 +37,21 @@ Current Year Player Stats - KUBOTA HOCKEY
                     <option value="categories">Categories</option>
                 </select>
             </div>
+            <!-- Add selection for Position Grouping -->
+            <div class="form-group col-sm-6 col-lg-2">
+                <label for="position-grouping">Position Grouping</label>
+                <select class="form-control" id="position-grouping" name="position_grouping">
+                    <option value="split">LW/C/RW/D</option>
+                    <option value="fw_def">FW/DEF</option>
+                </select>
+            </div>
         </div>
-
-        <!-- Roster Inputs Section -->
+    
+        <!-- Roster Inputs Section (Dynamic based on Position Grouping) -->
         <h5 class="text-center mb-3">Roster Settings</h5>
-        <div class="form-row">
+        
+        <!-- Split Roster Settings (LW, RW, C, D) -->
+        <div id="roster-settings-split" class="form-row">
             <div class="form-group col-sm-6 col-md-4 col-lg-2">
                 <label for="lw-starters">LW Starters:</label>
                 <input type="number" class="form-control" id="lw-starters" name="lw_starters" value="2" min="0">
@@ -60,78 +70,118 @@ Current Year Player Stats - KUBOTA HOCKEY
             </div>
             <div class="form-group col-sm-6 col-md-4 col-lg-2">
                 <label for="bench">Bench:</label>
-                <input type="number" class="form-control" id="bench" name="bench" value="4" min="0">
-            </div>
-            <div class="form-group col-sm-6 col-md-4 col-lg-2">
-                <label for="competitors">Competitors:</label>
-                <input type="number" class="form-control" id="competitors" name="competitors" value="10" min="2">
-            </div>
-        </div>
-
-        <!-- Scoring Settings Section -->
-        <h5 class="text-center mb-3">Scoring Settings</h5>
-        <div class="form-row">
-            <div class="form-group col">
-                <label for="g-points">G</label>
-                <input type="number" class="form-control scoring-input" id="g-points" name="g_points" value="1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="a-points">A</label>
-                <input type="number" class="form-control scoring-input" id="a-points" name="a_points" value="1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="sog-points">SOG</label>
-                <input type="number" class="form-control scoring-input" id="sog-points" name="sog_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="pim-points">PIM</label>
-                <input type="number" class="form-control scoring-input" id="pim-points" name="pim_points" value="0.1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="plusminus-points">+/-</label>
-                <input type="number" class="form-control scoring-input" id="plusminus-points" name="plusminus_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="ppg-points">PPG</label>
-                <input type="number" class="form-control scoring-input" id="ppg-points" name="ppg_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="ppa-points">PPA</label>
-                <input type="number" class="form-control scoring-input" id="ppa-points" name="ppa_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="shg-points">SHG</label>
-                <input type="number" class="form-control scoring-input" id="shg-points" name="shg_points" value="1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="sha-points">SHA</label>
-                <input type="number" class="form-control scoring-input" id="sha-points" name="sha_points" value="1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="blk-points">BLK</label>
-                <input type="number" class="form-control scoring-input" id="blk-points" name="blk_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="hit-points">HIT</label>
-                <input type="number" class="form-control scoring-input" id="hit-points" name="hit_points" value="0.5" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="fol-points">FOL</label>
-                <input type="number" class="form-control scoring-input" id="fol-points" name="fol_points" value="-0.1" step="any">
-            </div>
-            <div class="form-group col">
-                <label for="fow-points">FOW</label>
-                <input type="number" class="form-control scoring-input" id="fow-points" name="fow_points" value="0.1" step="any">
+                <input type="number" class="form-control" id="bench-split" name="bench_split" value="4" min="0">
             </div>
         </div>
         
-        <!-- Buttons -->
+        <!-- FW/DEF Roster Settings -->
+        <div id="roster-settings-fwdef" class="form-row" style="display: none;">
+            <div class="form-group col-sm-6 col-md-4 col-lg-2">
+                <label for="fw-starters">FW Starters:</label>
+                <input type="number" class="form-control" id="fw-starters" name="fw_starters" value="6" min="0">
+            </div>
+            <div class="form-group col-sm-6 col-md-4 col-lg-2">
+                <label for="def-starters">DEF Starters:</label>
+                <input type="number" class="form-control" id="def-starters" name="def_starters" value="4" min="0">
+            </div>
+            <div class="form-group col-sm-6 col-md-4 col-lg-2">
+                <label for="bench">Bench:</label>
+                <input type="number" class="form-control" id="bench-fwdef" name="bench_fwdef" value="4" min="0">
+            </div>
+        </div>
+
+    
+        <!-- Scoring Settings Section -->
+        <h5 class="text-center mb-3">Scoring Settings</h5>
+        
+        <!-- First Row -->
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="g-points">G (Goals)</label>
+                <input type="number" class="form-control scoring-input" id="g-points" name="g_points" value="6" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="a-points">A (Assists)</label>
+                <input type="number" class="form-control scoring-input" id="a-points" name="a_points" value="4" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="sog-points">SOG (Shots on Goal)</label>
+                <input type="number" class="form-control scoring-input" id="sog-points" name="sog_points" value="0.9" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="pim-points">PIM (Penalty Minutes)</label>
+                <input type="number" class="form-control scoring-input" id="pim-points" name="pim_points" value="0" step="any">
+            </div>
+        </div>
+        
+        <!-- Second Row -->
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="plusminus-points">+/- (Plus/Minus)</label>
+                <input type="number" class="form-control scoring-input" id="plusminus-points" name="plusminus_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="ppg-points">PPG (Power Play Goals)</label>
+                <input type="number" class="form-control scoring-input" id="ppg-points" name="ppg_points" value="2" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="ppa-points">PPA (Power Play Assists)</label>
+                <input type="number" class="form-control scoring-input" id="ppa-points" name="ppa_points" value="2" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="ppp-points">PPP (Power Play Points)</label>
+                <input type="number" class="form-control scoring-input" id="ppp-points" name="ppp_points" value="0" step="any">
+            </div>
+        </div>
+        
+        <!-- Third Row -->
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="shg-points">SHG (Short-Handed Goals)</label>
+                <input type="number" class="form-control scoring-input" id="shg-points" name="shg_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="sha-points">SHA (Short-Handed Assists)</label>
+                <input type="number" class="form-control scoring-input" id="sha-points" name="sha_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="shp-points">SHP (Short-Handed Points)</label>
+                <input type="number" class="form-control scoring-input" id="shp-points" name="shp_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="blk-points">BLK (Blocked Shots)</label>
+                <input type="number" class="form-control scoring-input" id="blk-points" name="blk_points" value="0.5" step="any">
+            </div>
+        </div>
+        
+        <!-- Fourth Row -->
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="hit-points">HIT (Hits)</label>
+                <input type="number" class="form-control scoring-input" id="hit-points" name="hit_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="fol-points">FOL (Faceoff Losses)</label>
+                <input type="number" class="form-control scoring-input" id="fol-points" name="fol_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="fow-points">FOW (Faceoff Wins)</label>
+                <input type="number" class="form-control scoring-input" id="fow-points" name="fow_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="defensive-points">Defensive Points Multiplier</label>
+                <input type="number" class="form-control scoring-input" id="defensive-points" name="defensive_points" value="0" step="any">
+            </div>
+        </div>
+
+
+        
+        <!-- Submit and Export Buttons -->
         <div class="form-row mt-4">
             <div class="col">
                 <button type="submit" class="btn btn-primary">Calculate Fantasy Points</button>
-                </div>
-                <button id="export-csv" type="button" class="btn btn-primary ml-2">Export to CSV</button></div>
             </div>
+            <button id="export-csv" type="button" class="btn btn-primary ml-2">Export to CSV</button>
         </div>
     </form>
 
@@ -156,8 +206,10 @@ Current Year Player Stats - KUBOTA HOCKEY
                     <th data-sort="PLUSMINUS_GP">+/-</th>
                     <th data-sort="PPG">PPG</th>
                     <th data-sort="PPA">PPA</th>
+                    <th data-sort="PPA">PPP</th>
                     <th data-sort="SHG">SHG</th>
                     <th data-sort="SHA">SHA</th>
+                    <th data-sort="SHA">SHP</th>
                     <th data-sort="BLK_GP">BLK</th>
                     <th data-sort="HIT_GP">HIT</th>
                     <th data-sort="FOL_GP">FOL</th>
