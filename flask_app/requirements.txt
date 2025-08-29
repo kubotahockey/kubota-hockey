@@ -1,0 +1,11 @@
+# App
+Flask==3.0.3
+Flask-Login==0.6.3
+SQLAlchemy==2.0.34
+pandas==2.2.2
+numpy==1.26.4
+stripe==10.6.0
+
+# Dev/ops (optional; comment out if not needed)
+# gunicorn==22.0.0       # prod WSGI (Linux/Heroku)
+# python-dotenv==1.0.1   # load .env for local dev

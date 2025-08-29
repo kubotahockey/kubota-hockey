@@ -1,0 +1,4 @@
+flask_app/database/*.db
+flask_app/database/*.sqlite
+__pycache__/
+*.pyc
