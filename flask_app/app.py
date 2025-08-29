@@ -677,4 +677,4 @@ def inject_team_rankings():
     return dict(teams_ranked=team_rankings.to_dict(orient='records'))
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    pass
