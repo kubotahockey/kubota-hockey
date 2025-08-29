@@ -14,20 +14,33 @@ app.secret_key = 'your_secret_key'
 # =============================================================================
 # DB CONFIG (cross-platform: works on Windows & Linux)
 # =============================================================================
-
-# app.py lives in .../flask_app, so the DB is .../flask_app/database/Kubota_Website_PROD.db
+# Resolve DB path relative to this file so it works on both Windows and Linux
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB = BASE_DIR / "database" / "Kubota_Website_PROD.db"
+DB_PROD_PATH = str((BASE_DIR / "database" / "Kubota_Website_PROD.db").resolve())
 
-# Allow override via env var if you ever want to point elsewhere on the server
-DB_PROD_PATH = Path(os.environ.get("KUBOTA_DB", str(DEFAULT_DB))).resolve()
+# Allow override via env if you ever need it
+import os
+DB_PROD_PATH = os.getenv("KUBOTA_DB_PATH", DB_PROD_PATH)
 
-# Fail fast if the DB isn't where we expect it
-if not DB_PROD_PATH.exists():
-    raise FileNotFoundError(f"SQLite DB not found: {DB_PROD_PATH}")
+engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
 
-# Use POSIX path so SQLAlchemy URL is valid on all OSes
-engine = create_engine(f"sqlite:///{DB_PROD_PATH.as_posix()}", future=True)
+# Table names used below
+TABLE_FINAL        = "FINAL_PROJECTIONS"
+TABLE_ROSTER_CLEAN = "1YR_FINAL_ROSTER_CLEAN"
+TABLE_COMPS_1YR    = "1YR_FINAL_COMPS"
+TABLE_COMPS_DRAFT  = "DRAFT_PROJECTIONS_COMPS"
+
+# Optional: quick sanity check so errors are clearer
+def _assert_table(conn_engine, table_name):
+    from sqlalchemy.exc import SQLAlchemyError
+    try:
+        with conn_engine.connect() as conn:
+            conn.exec_driver_sql(f'SELECT 1 FROM [{table_name}] LIMIT 1')
+    except SQLAlchemyError as e:
+        raise RuntimeError(
+            f"SQLite table [{table_name}] not found in DB: {DB_PROD_PATH}"
+        ) from e
+
 
 LAST_UPDATE = "Aug 28, 2025"
 
