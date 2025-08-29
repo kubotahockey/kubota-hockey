@@ -14,12 +14,12 @@ app.secret_key = 'your_secret_key'
 # =============================================================================
 # DB CONFIG (cross-platform: works on Windows & Linux)
 # =============================================================================
+
 # Resolve DB path relative to this file so it works on both Windows and Linux
 BASE_DIR = Path(__file__).resolve().parent
 DB_PROD_PATH = str((BASE_DIR / "database" / "Kubota_Website_PROD.db").resolve())
 
-# Allow override via env if you ever need it
-import os
+
 DB_PROD_PATH = os.getenv("KUBOTA_DB_PATH", DB_PROD_PATH)
 
 engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
@@ -40,8 +40,8 @@ def _assert_table(conn_engine, table_name):
         raise RuntimeError(
             f"SQLite table [{table_name}] not found in DB: {DB_PROD_PATH}"
         ) from e
-
-
+        
+        
 LAST_UPDATE = "Aug 28, 2025"
 
 # =============================================================================
@@ -691,4 +691,4 @@ def inject_team_rankings():
     return dict(teams_ranked=team_rankings.to_dict(orient='records'))
 
 if __name__ == '__main__':
-    pass
+    app.run(debug=True, use_reloader=False)
