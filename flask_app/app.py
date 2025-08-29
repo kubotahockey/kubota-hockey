@@ -12,7 +12,7 @@ app.secret_key = 'your_secret_key'
 # =============================================================================
 # DB CONFIG
 # =============================================================================
-DB_PROD_PATH = r"C:\Users\brennan\kubota_project\flask_app\database\Kubota_Website_PROD.db"
+DB_PROD_PATH = r"flask_app\database\Kubota_Website_PROD.db"
 engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
 
 TABLE_FINAL          = "FINAL_PROJECTIONS"          # per-GP prod projections
