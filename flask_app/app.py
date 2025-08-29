@@ -1,24 +1,32 @@
-#!usr/bin/env python3
+#!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 import io, csv, random
 import math
+import os
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # =============================================================================
-# DB CONFIG
+# DB CONFIG (cross-platform: works on Windows & Linux)
 # =============================================================================
-DB_PROD_PATH = r"flask_app\database\Kubota_Website_PROD.db"
-engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
 
-TABLE_FINAL          = "FINAL_PROJECTIONS"          # per-GP prod projections
-TABLE_ROSTER_CLEAN   = "1YR_FINAL_ROSTER_CLEAN"     # roster + logo
-TABLE_COMPS_1YR      = "1YR_FINAL_COMPS"            # comps (target_player, player, similarity)
-TABLE_COMPS_DRAFT    = "DRAFT_PROJECTIONS_COMPS"    # draft comps (same schema)
+# app.py lives in .../flask_app, so the DB is .../flask_app/database/Kubota_Website_PROD.db
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_DB = BASE_DIR / "database" / "Kubota_Website_PROD.db"
+
+# Allow override via env var if you ever want to point elsewhere on the server
+DB_PROD_PATH = Path(os.environ.get("KUBOTA_DB", str(DEFAULT_DB))).resolve()
+
+# Fail fast if the DB isn't where we expect it
+if not DB_PROD_PATH.exists():
+    raise FileNotFoundError(f"SQLite DB not found: {DB_PROD_PATH}")
+
+# Use POSIX path so SQLAlchemy URL is valid on all OSes
+engine = create_engine(f"sqlite:///{DB_PROD_PATH.as_posix()}", future=True)
 
 LAST_UPDATE = "Aug 28, 2025"
 
