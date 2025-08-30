@@ -483,7 +483,7 @@ def calculate_fantasy_points():
                 f'<td data-key="GP">{round(row["GP"], 2)}</td>'
                 f'<td data-key="G_GP">{round(row["G_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="A_GP">{round(row["A_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PTS_GP">{round(row["G_GP"] + row["A_GP"], 2)}</td>'
+                f'<td data-key="PTS_GP">{round(row["G_GP"] + row["A_GP"], 2)* row["GP"]}</td>'
                 f'<td data-key="SOG_GP">{round(row["SOG_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="PIM_GP">{round(row["PIM_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="PLUSMINUS_GP">{round(row["PLUSMINUS_GP"] * row["GP"], 2)}</td>'
