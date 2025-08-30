@@ -42,7 +42,7 @@ def _assert_table(conn_engine, table_name):
         ) from e
         
         
-LAST_UPDATE = "Aug 28, 2025"
+LAST_UPDATE = "Aug 30, 2025"
 
 # =============================================================================
 # HELPERS
@@ -691,4 +691,5 @@ def inject_team_rankings():
     return dict(teams_ranked=team_rankings.to_dict(orient='records'))
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    #app.run(debug=True, use_reloader=False)
+    pass
