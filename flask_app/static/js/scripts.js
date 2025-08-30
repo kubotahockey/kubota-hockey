@@ -57,10 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p><strong>Position:</strong> ${player.fw_def}</p>
                     </div>
                     <div class="info-row">
-                        <p><strong>Height:</strong> ${player.height}</p>
-                        <p><strong>Weight:</strong> ${player.weight}</p>
-                    </div>
-                    <div class="info-row">
                         <p><strong>Draft Year:</strong> ${player.draft_year}</p>
                         <p><strong>Draft Pick:</strong> ${player.overall}</p>
                     </div>
