@@ -255,7 +255,11 @@ for y, x in enumerate(range(3, 10), start=1):
 # =============================================================================
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template(
+        'index.html',
+        meta_title = "Kubota Hockey - NHL Projections",
+        meta_description = "Premium Statistical Projection System"
+        )
 
 @app.context_processor
 def inject_last_update():
@@ -690,6 +694,8 @@ def inject_team_rankings():
     team_rankings['Rank'] = range(1, len(team_rankings) + 1)
     return dict(teams_ranked=team_rankings.to_dict(orient='records'))
 
+
+
 if __name__ == '__main__':
-    #app.run(debug=True, use_reloader=False)
-    pass
+    app.run(debug=True, use_reloader=False)
+    #pass
