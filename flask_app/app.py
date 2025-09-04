@@ -325,9 +325,11 @@ def calculate_fantasy_points():
         bench_weight = float(request.form.get('bench_weight', 0.6))
         stream_total = int(math.floor(bench_total * max(min(bench_weight, 1.0), 0.0)))
 
+        # Scoring weights (Points league). PTS added.
         scoring_settings = {
             'G': float(request.form.get('g_points', 6)),
             'A': float(request.form.get('a_points', 4)),
+            'PTS': float(request.form.get('pts_points', 0)),  # NEW
             'SOG': float(request.form.get('sog_points', 0.9)),
             'PIM': float(request.form.get('pim_points', 0)),
             'PLUSMINUS': float(request.form.get('plusminus_points', 2)),
@@ -354,6 +356,7 @@ def calculate_fantasy_points():
         # Convenience totals
         df_selected['PPP'] = df_selected['PPG'] + df_selected['PPA']
         df_selected['SHP'] = df_selected['SHG'] + df_selected['SHA']
+        df_selected['PTS_GP'] = df_selected['G_GP'] + df_selected['A_GP']  # NEW
 
         # Ensure numeric inputs
         num_cols = [
@@ -367,9 +370,11 @@ def calculate_fantasy_points():
 
         # --- Fantasy Points ---
         if league_type == 'points':
+            # Include PTS weight. To avoid double counting, set G=A=0 if you use PTS>0.
             df_selected['FantasyPoints'] = (
                 df_selected['G_GP'] * df_selected['GP'] * scoring_settings['G'] +
                 df_selected['A_GP'] * df_selected['GP'] * scoring_settings['A'] +
+                df_selected['PTS_GP'] * df_selected['GP'] * scoring_settings['PTS'] +  # NEW
                 df_selected['SOG_GP'] * df_selected['GP'] * scoring_settings['SOG'] +
                 df_selected['PIM_GP'] * df_selected['GP'] * scoring_settings['PIM'] +
                 df_selected['PLUSMINUS_GP'] * df_selected['GP'] * scoring_settings['PLUSMINUS'] +
@@ -390,9 +395,15 @@ def calculate_fantasy_points():
                 (df_selected.loc[is_d, 'G_GP'] * df_selected.loc[is_d, 'GP'] +
                  df_selected.loc[is_d, 'A_GP'] * df_selected.loc[is_d, 'GP']) * defensive_points_multiplier
             )
+
         else:
+            # CATEGORIES: checkboxes named "categories" control inclusion (Z-score)
+            # Values must match keys we derive below (G, A, PTS, SOG, PIM, PLUSMINUS, PPG, PPA, PPP, SHG, SHA, SHP, BLK, HIT, FOL, FOW)
+            included_cats = set(request.form.getlist('categories'))
+
             cat_cols = [
-                'G_GP','A_GP','SOG_GP','PIM_GP','PLUSMINUS_GP',
+                'G_GP','A_GP','PTS_GP',  # include PTS
+                'SOG_GP','PIM_GP','PLUSMINUS_GP',
                 'PPG','PPA','PPP','SHG','SHA','SHP','BLK_GP','HIT_GP','FOL_GP','FOW_GP'
             ]
             df_selected['FantasyPoints'] = 0.0
@@ -401,8 +412,11 @@ def calculate_fantasy_points():
                 df_selected[total_col] = df_selected[c] * df_selected['GP']
                 m = df_selected[total_col].mean()
                 s = df_selected[total_col].std()
-                key = c.replace('_GP', '')
-                mult = scoring_settings.get(key, 0)
+
+                # Map column name to checkbox key
+                key = c.replace('_GP', '')  # e.g., 'PTS_GP' -> 'PTS', 'BLK_GP' -> 'BLK', 'PPG' -> 'PPG'
+                mult = 1.0 if key in included_cats else 0.0
+
                 if mult != 0 and s and s != 0:
                     df_selected['FantasyPoints'] += ((df_selected[total_col] - m) / s) * mult
 
@@ -424,7 +438,7 @@ def calculate_fantasy_points():
 
         df_selected['PosGroup'] = df_selected['Pos'].apply(to_pos_group)
 
-        # --- Roster selection: POS -> UTIL -> STREAM (daily-lineup impact) ---
+        # --- Roster selection: POS -> UTIL -> STREAM ---
         df_selected['Rostered'] = False
         df_selected['RosterSource'] = ''
 
@@ -458,11 +472,10 @@ def calculate_fantasy_points():
                 df_selected.loc[stream_idx, 'Rostered'] = True
                 df_selected.loc[stream_idx, 'RosterSource'] = 'STREAM'
 
-        # --- Replacement baselines from ACTUAL rostered set (POS + UTIL + STREAM) ---
+        # --- Replacement baselines from ACTUAL rostered set ---
         rostered_df = df_selected.loc[df_selected['Rostered']]
         baselines = {}
         for grp, sub in rostered_df.groupby('PosGroup'):
-            # Replacement = worst of the rostered at that position (includes UTIL/STREAM spillover)
             baselines[grp] = float(sub['FantasyPoints'].min()) if not sub.empty else 0.0
 
         df_selected['AvgPosFP'] = df_selected['PosGroup'].map(lambda g: baselines.get(g, 0.0)).fillna(0.0)
@@ -470,7 +483,7 @@ def calculate_fantasy_points():
         # --- VORP ---
         df_selected['VORP'] = df_selected['FantasyPoints'] - df_selected['AvgPosFP']
 
-        # Sort by VORP (or by 'FantasyPoints' if preferred)
+        # Sort by VORP
         df_selected = df_selected.sort_values(by='VORP', ascending=False)
 
         # --- Build rows (with data-key for sorting) ---
@@ -483,11 +496,11 @@ def calculate_fantasy_points():
                 f'<td>{rank}</td>'
                 f'<td data-key="name">{row["name"]}</td>'
                 f'<td data-key="team">{row["team"]}</td>'
-                f'<td data-key="Pos">{row["Pos"].replace("LW","Left Wing").replace("RW","Right Wing").replace("C","Center").replace("D","Defense")}</td>'
+                f'<td data-key="Pos">{row["Pos"]}</td>'
                 f'<td data-key="GP">{round(row["GP"], 2)}</td>'
                 f'<td data-key="G_GP">{round(row["G_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="A_GP">{round(row["A_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PTS_GP">{round((row["G_GP"] + row["A_GP"])* row["GP"], 2)}</td>'
+                f'<td data-key="PTS_GP">{round((row["G_GP"] + row["A_GP"]) * row["GP"], 2)}</td>'
                 f'<td data-key="SOG_GP">{round(row["SOG_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="PIM_GP">{round(row["PIM_GP"] * row["GP"], 2)}</td>'
                 f'<td data-key="PLUSMINUS_GP">{round(row["PLUSMINUS_GP"] * row["GP"], 2)}</td>'
@@ -509,6 +522,7 @@ def calculate_fantasy_points():
 
     except Exception as e:
         return f"An error occurred during the calculation: {str(e)}", 500
+
 
 @app.route('/export_csv', methods=['POST'])
 def export_csv():

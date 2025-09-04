@@ -102,94 +102,247 @@
         <!-- Scoring Settings Section -->
         <h5 class="text-center mb-3">Scoring Settings</h5>
         
-        <!-- First Row -->
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="g-points">G (Goals)</label>
-                <input type="number" class="form-control scoring-input" id="g-points" name="g_points" value="6" step="any">
+        <!-- Categories Selection (Checkboxes) -->
+        <div id="categories-checkboxes" class="mb-3" style="display:none;">
+          <h6 class="mb-2">Choose Categories</h6>
+          <div class="form-row">
+            <!-- Row 1 -->
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-G" value="G" checked>
+                <label class="form-check-label" for="cat-G">G (Goals)</label>
+              </div>
             </div>
-            <div class="form-group col-md-3">
-                <label for="a-points">A (Assists)</label>
-                <input type="number" class="form-control scoring-input" id="a-points" name="a_points" value="4" step="any">
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-A" value="A" checked>
+                <label class="form-check-label" for="cat-A">A (Assists)</label>
+              </div>
             </div>
-            <div class="form-group col-md-3">
-                <label for="sog-points">SOG (Shots on Goal)</label>
-                <input type="number" class="form-control scoring-input" id="sog-points" name="sog_points" value="0.9" step="any">
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PTS" value="PTS">
+                <label class="form-check-label" for="cat-PTS">PTS (G+A)</label>
+              </div>
             </div>
-            <div class="form-group col-md-3">
-                <label for="pim-points">PIM (Penalty Minutes)</label>
-                <input type="number" class="form-control scoring-input" id="pim-points" name="pim_points" value="0" step="any">
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-SOG" value="SOG" checked>
+                <label class="form-check-label" for="cat-SOG">SOG (Shots)</label>
+              </div>
             </div>
+        
+            <!-- Row 2 -->
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PIM" value="PIM">
+                <label class="form-check-label" for="cat-PIM">PIM</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PLUSMINUS" value="PLUSMINUS">
+                <label class="form-check-label" for="cat-PLUSMINUS">+/-</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PPG" value="PPG">
+                <label class="form-check-label" for="cat-PPG">PPG</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PPA" value="PPA">
+                <label class="form-check-label" for="cat-PPA">PPA</label>
+              </div>
+            </div>
+        
+            <!-- Row 3 -->
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-PPP" value="PPP">
+                <label class="form-check-label" for="cat-PPP">PPP</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-SHG" value="SHG">
+                <label class="form-check-label" for="cat-SHG">SHG</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-SHA" value="SHA">
+                <label class="form-check-label" for="cat-SHA">SHA</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-SHP" value="SHP">
+                <label class="form-check-label" for="cat-SHP">SHP</label>
+              </div>
+            </div>
+        
+            <!-- Row 4 -->
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-BLK" value="BLK">
+                <label class="form-check-label" for="cat-BLK">BLK</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-HIT" value="HIT">
+                <label class="form-check-label" for="cat-HIT">HIT</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-FOL" value="FOL">
+                <label class="form-check-label" for="cat-FOL">FOL</label>
+              </div>
+            </div>
+            <div class="form-group col-6 col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="categories" id="cat-FOW" value="FOW">
+                <label class="form-check-label" for="cat-FOW">FOW</label>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <!-- Second Row -->
-        <div class="form-row">
+        <!-- Points Section (numeric inputs) -->
+        <div id="points-settings">
+          <!-- First Row -->
+          <div class="form-row">
             <div class="form-group col-md-3">
-                <label for="plusminus-points">+/- (Plus/Minus)</label>
-                <input type="number" class="form-control scoring-input" id="plusminus-points" name="plusminus_points" value="0" step="any">
+              <label for="g-points">G (Goals)</label>
+              <input type="number" class="form-control scoring-input" id="g-points" name="g_points" value="6" step="any">
             </div>
             <div class="form-group col-md-3">
-                <label for="ppg-points">PPG (Power Play Goals)</label>
-                <input type="number" class="form-control scoring-input" id="ppg-points" name="ppg_points" value="2" step="any">
+              <label for="a-points">A (Assists)</label>
+              <input type="number" class="form-control scoring-input" id="a-points" name="a_points" value="4" step="any">
             </div>
             <div class="form-group col-md-3">
-                <label for="ppa-points">PPA (Power Play Assists)</label>
-                <input type="number" class="form-control scoring-input" id="ppa-points" name="ppa_points" value="2" step="any">
+              <label for="pts-points">PTS (G + A)</label>
+              <input type="number" class="form-control scoring-input" id="pts-points" name="pts_points" value="0" step="any">
             </div>
             <div class="form-group col-md-3">
-                <label for="ppp-points">PPP (Power Play Points)</label>
-                <input type="number" class="form-control scoring-input" id="ppp-points" name="ppp_points" value="0" step="any">
+              <label for="sog-points">SOG (Shots on Goal)</label>
+              <input type="number" class="form-control scoring-input" id="sog-points" name="sog_points" value="0.9" step="any">
             </div>
+          </div>
+        
+          <!-- Second Row -->
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label for="pim-points">PIM (Penalty Minutes)</label>
+              <input type="number" class="form-control scoring-input" id="pim-points" name="pim_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="plusminus-points">+/- (Plus/Minus)</label>
+              <input type="number" class="form-control scoring-input" id="plusminus-points" name="plusminus_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="ppg-points">PPG (Power Play Goals)</label>
+              <input type="number" class="form-control scoring-input" id="ppg-points" name="ppg_points" value="2" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="ppa-points">PPA (Power Play Assists)</label>
+              <input type="number" class="form-control scoring-input" id="ppa-points" name="ppa_points" value="2" step="any">
+            </div>
+          </div>
+        
+          <!-- Third Row -->
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label for="ppp-points">PPP (Power Play Points)</label>
+              <input type="number" class="form-control scoring-input" id="ppp-points" name="ppp_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="shg-points">SHG (Short-Handed Goals)</label>
+              <input type="number" class="form-control scoring-input" id="shg-points" name="shg_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="sha-points">SHA (Short-Handed Assists)</label>
+              <input type="number" class="form-control scoring-input" id="sha-points" name="sha_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="shp-points">SHP (Short-Handed Points)</label>
+              <input type="number" class="form-control scoring-input" id="shp-points" name="shp_points" value="0" step="any">
+            </div>
+          </div>
+        
+          <!-- Fourth Row -->
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label for="blk-points">BLK (Blocked Shots)</label>
+              <input type="number" class="form-control scoring-input" id="blk-points" name="blk_points" value="0.5" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="hit-points">HIT (Hits)</label>
+              <input type="number" class="form-control scoring-input" id="hit-points" name="hit_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="fol-points">FOL (Faceoff Losses)</label>
+              <input type="number" class="form-control scoring-input" id="fol-points" name="fol_points" value="0" step="any">
+            </div>
+            <div class="form-group col-md-3">
+              <label for="fow-points">FOW (Faceoff Wins)</label>
+              <input type="number" class="form-control scoring-input" id="fow-points" name="fow_points" value="0" step="any">
+            </div>
+          </div>
+        
+          <!-- Fifth Row -->
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label for="defensive-points">Defensive Points Multiplier</label>
+              <input type="number" class="form-control scoring-input" id="defensive-points" name="defensive_points" value="0" step="any">
+            </div>
+          </div>
         </div>
         
-        <!-- Third Row -->
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="shg-points">SHG (Short-Handed Goals)</label>
-                <input type="number" class="form-control scoring-input" id="shg-points" name="shg_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="sha-points">SHA (Short-Handed Assists)</label>
-                <input type="number" class="form-control scoring-input" id="sha-points" name="sha_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="shp-points">SHP (Short-Handed Points)</label>
-                <input type="number" class="form-control scoring-input" id="shp-points" name="shp_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="blk-points">BLK (Blocked Shots)</label>
-                <input type="number" class="form-control scoring-input" id="blk-points" name="blk_points" value="0.5" step="any">
-            </div>
-        </div>
+        <!-- Toggle script -->
+        <script>
+          (function() {
+            function refreshVisibility() {
+              const leagueTypeEl   = document.getElementById('league-type');
+              const isCats         = leagueTypeEl && leagueTypeEl.value === 'categories';
         
-        <!-- Fourth Row -->
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="hit-points">HIT (Hits)</label>
-                <input type="number" class="form-control scoring-input" id="hit-points" name="hit_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="fol-points">FOL (Faceoff Losses)</label>
-                <input type="number" class="form-control scoring-input" id="fol-points" name="fol_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="fow-points">FOW (Faceoff Wins)</label>
-                <input type="number" class="form-control scoring-input" id="fow-points" name="fow_points" value="0" step="any">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="defensive-points">Defensive Points Multiplier</label>
-                <input type="number" class="form-control scoring-input" id="defensive-points" name="defensive_points" value="0" step="any">
-            </div>
-        </div>
-
-
+              const categoriesBox  = document.getElementById('categories-checkboxes');
+              const pointsSettings = document.getElementById('points-settings');
+        
+              if (categoriesBox) categoriesBox.style.display  = isCats ? '' : 'none';
+              if (pointsSettings) pointsSettings.style.display = isCats ? 'none' : '';
+        
+              // Disable hidden inputs so they don't submit, enable shown ones
+              if (pointsSettings) {
+                pointsSettings.querySelectorAll('input').forEach(inp => { inp.disabled = isCats; });
+              }
+              if (categoriesBox) {
+                categoriesBox.querySelectorAll('input').forEach(inp => { inp.disabled = !isCats; });
+              }
+            }
+        
+            document.addEventListener('change', function(e) {
+              if (e.target && e.target.id === 'league-type') {
+                refreshVisibility();
+              }
+            });
+        
+            document.addEventListener('DOMContentLoaded', refreshVisibility);
+          })();
+        </script>
         
         <!-- Submit and Export Buttons -->
         <div class="form-row mt-4">
             <div class="col">
                 <button type="submit" class="btn btn-primary">Calculate Fantasy Points</button>
             </div>
-            <button id="export-csv" type="button" class="btn btn-primary ml-2">Export to CSV</button>
+            <button id="export-csv" type="button" class="btn btn-primary ml-2">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </button>
         </div>
     </form>
 

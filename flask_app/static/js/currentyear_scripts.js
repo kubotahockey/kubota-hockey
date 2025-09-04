@@ -1,167 +1,284 @@
-$(document).ready(function() {
-    $('#scoring-settings-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        let formData = $(this).serialize();  // Serialize form data
-        
-        $.ajax({
-            type: 'POST',
-            url: '/calculate_fantasy_points',
-            data: formData,
-            success: function(response) {
-                $('#table-body').html(response);  // Inject the returned rows into the table body
-                applyRanking();
-                applySearch();
-            },
-            error: function(error) {
-                console.error("Error calculating fantasy points:", error);
-            }
-        });
+// ===========================
+// Kubota Hockey - Table JS (Pos-only filter + global sort)
+// ===========================
+$(document).ready(function () {
+  // ---------------------------
+  // Helpers / Config
+  // ---------------------------
+  function getTableSelector() {
+    if ($('#player-table').length) return '#player-table';
+    if ($('#player-data').length) return '#player-data';
+    return '#player-table';
+  }
+  function getTBodySelector() { return '#table-body'; }
+
+  function applyRanking() {
+    const $rows = $(`${getTBodySelector()} tr:visible`);
+    $rows.each(function (i) { $(this).find('td').eq(0).text(i + 1); });
+  }
+
+  function parseNum(v) {
+    if (v == null || v === '') return null;
+    const n = Number(String(v).replace(/,/g, ''));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // ---------------------------
+  // Column detection + sorting
+  // ---------------------------
+  let CURRENT_COLS = [];
+  let POS_COL_INDEX = null;
+
+  function detectColumns() {
+    const tableSel = getTableSelector();
+    const cols = [];
+    const $headerRow = $(`${tableSel} thead tr`).first();
+    const $rows = $(`${getTBodySelector()} tr`);
+
+    $headerRow.find('th').each(function (i) {
+      const title = ($(this).text() || '').trim();
+      const vals = $rows.map(function () {
+        return ($(this).find('td').eq(i).text() || '').trim();
+      }).get();
+
+      const numeric = vals.filter(v => v !== '').every(v => !isNaN(parseFloat(v.replace(/,/g, ''))));
+      cols.push({ index: i, title, type: numeric ? 'number' : 'text' });
+
+      const t = title.toLowerCase();
+      if (t === 'pos' || t === 'position') POS_COL_INDEX = i;
     });
 
-    $('#export-csv').on('click', function() {
-        let tableData = [];
-        let headers = [];
+    return cols;
+  }
 
-        // Get table headers
-        $('#player-data thead th').each(function() {
-            headers.push($(this).text().trim());
-        });
-        tableData.push(headers);
+  /** Header: only Position gets a filter input; Rank (col 0) and others are blank */
+  function ensureFilterRow() {
+    const tableSel = getTableSelector();
+    const $thead = $(`${tableSel} thead`);
+    const $firstRow = $(`${tableSel} thead tr`).first();
+    const colCount = $firstRow.children('th').length;
 
-        // Get table rows
-        $('#player-data tbody tr').each(function() {
-            let rowData = [];
-            $(this).find('td').each(function() {
-                rowData.push($(this).text().trim());
-            });
-            tableData.push(rowData);
-        });
+    $thead.find('tr.filters').remove();
+    const $filters = $('<tr class="filters"></tr>');
 
-        // Send table data to server for CSV export
-        $.ajax({
-            type: 'POST',
-            url: '/export_csv',
-            contentType: 'application/json',
-            data: JSON.stringify({ tableData: tableData }),
-            success: function(response) {
-                const url = window.URL.createObjectURL(new Blob([response]));
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'kubota_hockey_2024_2025.csv';  // Set the download filename here
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            },
-            error: function(error) {
-                console.error("Error exporting CSV:", error);
-            }
-        });
-    });
-
-    $('#league-type').on('change', function() {
-        const leagueType = $(this).val();
-        
-        if (leagueType === 'points') {
-            // Set default values for Points League
-            $('#g-points').val(6);         // Goals
-            $('#a-points').val(4);         // Assists
-            $('#sog-points').val(0.9);     // Shots on Goal
-            $('#pim-points').val(0);       // Penalty Minutes
-            $('#plusminus-points').val(2); // Plus/Minus
-            $('#ppg-points').val(2);       // Power Play Goals
-            $('#ppa-points').val(2);       // Power Play Assists
-            $('#ppp-points').val(2);       // Power Play Points (PPP)
-            $('#shg-points').val(0);       // Short-Handed Goals
-            $('#sha-points').val(0);       // Short-Handed Assists
-            $('#shp-points').val(0);       // Short-Handed Points (SHP)
-            $('#blk-points').val(1);       // Blocked Shots
-            $('#hit-points').val(0);       // Hits
-            $('#fol-points').val(0);       // Faceoff Losses
-            $('#fow-points').val(0);       // Faceoff Wins
-            $('#defensive-points').val(1); // Defensive Points Multiplier
-        } else if (leagueType === 'categories') {
-            // Set default values for Categories League (all 1 by default, indicating inclusion)
-            $('#g-points').val(1);         // Goals
-            $('#a-points').val(1);         // Assists
-            $('#sog-points').val(1);       // Shots on Goal
-            $('#pim-points').val(0);       // Penalty Minutes
-            $('#plusminus-points').val(0); // Plus/Minus
-            $('#ppg-points').val(0);       // Power Play Goals
-            $('#ppa-points').val(0);       // Power Play Assists
-            $('#ppp-points').val(1);       // Power Play Points (PPP)
-            $('#shg-points').val(0);       // Short-Handed Goals
-            $('#sha-points').val(0);       // Short-Handed Assists
-            $('#shp-points').val(0);       // Short-Handed Points (SHP)
-            $('#blk-points').val(1);       // Blocked Shots
-            $('#hit-points').val(1);       // Hits
-            $('#fol-points').val(0);       // Faceoff Losses
-            $('#fow-points').val(0);       // Faceoff Wins
-            $('#defensive-points').val(0); // Defensive Points Multiplier
-        }
-    });
-
-    // Handle dynamic roster settings based on position grouping
-    $('#position-grouping').on('change', function() {
-        const grouping = $(this).val();
-        if (grouping === 'fw_def') {
-            $('#roster-settings-split').hide();
-            $('#roster-settings-fwdef').show();
-        } else if (grouping === 'split') {
-            $('#roster-settings-split').show();
-            $('#roster-settings-fwdef').hide();
-        }
-    });
-
-    // Apply ranking and sorting
-    function applyRanking() {
-        $('#table-body tr').each(function(index) {
-            $(this).find('td:first').text(index + 1);
-        });
+    for (let i = 0; i < colCount; i++) {
+      const $th = $('<th></th>');
+      // no filter in first column (Rank) and only show input for Position column
+      if (i === POS_COL_INDEX) {
+        $th.append(`<input id="filter-pos" type="text" placeholder="Filter…" class="kh-filter kh-txt">`);
+      }
+      $filters.append($th);
     }
-    
-    // Apply search functionality
-    $('#search-bar').on('keyup', function() {
-        const searchTerm = $(this).val().toLowerCase();
-        $('#table-body tr').filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1);
-        });
-        
-        applyRanking();  // Reapply ranking after filtering
-    });
 
-    // Apply sortable functionality to table headers
-    $('#player-table thead th[data-sort]').on('click', function() {
-        const sortKey = $(this).data('sort');
-        const rows = $('#table-body tr').get();
-        const isNumeric = $(this).data('numeric') || false;
+    $thead.append($filters);
 
-        rows.sort(function(a, b) {
-            const keyA = $(a).find(`td[data-key="${sortKey}"]`).text().toUpperCase();
-            const keyB = $(b).find(`td[data-key="${sortKey}"]`).text().toUpperCase();
+    // Bind only the Pos filter
+    $('#filter-pos').on('input', applyFilters);
+  }
 
-            if (isNumeric) {
-                return parseFloat(keyA) - parseFloat(keyB);
-            } else {
-                if (keyA < keyB) return -1;
-                if (keyA > keyB) return 1;
-                return 0;
-            }
-        });
+  /** Sorting on every header */
+  function bindSorting(columns) {
+    const tableSel = getTableSelector();
+    const $ths = $(`${tableSel} thead tr`).first().find('th');
+    $ths.css('cursor', 'pointer').off('click').on('click', function () {
+      const idx = $(this).index();
+      const col = columns[idx] || { type: 'text' };
 
-        // Toggle sort direction on subsequent clicks
-        if ($(this).hasClass('ascending')) {
-            rows.reverse();
-            $(this).removeClass('ascending').addClass('descending');
-        } else {
-            $(this).removeClass('descending').addClass('ascending');
+      const rows = $(`${getTBodySelector()} tr`).get();
+      rows.sort((a, b) => {
+        const ta = $(a).find('td').eq(idx).text().trim();
+        const tb = $(b).find('td').eq(idx).text().trim();
+        if (col.type === 'number') {
+          const na = parseNum(ta) ?? -Infinity;
+          const nb = parseNum(tb) ?? -Infinity;
+          return na - nb;
         }
+        return ta.localeCompare(tb, undefined, { numeric: true, sensitivity: 'base' });
+      });
 
-        // Append sorted rows back to the table body
-        $.each(rows, function(index, row) {
-            $('#table-body').append(row);
-        });
+      const asc = !$(this).hasClass('ascending');
+      $(`${tableSel} thead th`).removeClass('ascending descending');
+      $(this).addClass(asc ? 'ascending' : 'descending');
+      if (!asc) rows.reverse();
 
-        applyRanking();  // Reapply ranking after sorting
+      $.each(rows, function (_, row) {
+        $(`${getTBodySelector()}`).append(row);
+      });
+
+      applyFilters(); // keep current filter applied
     });
+  }
+
+  // ---------------------------
+  // Filtering (Pos-only + global search)
+  // ---------------------------
+  function applyFilters() {
+    const posQuery = ($('#filter-pos').val() || '').toLowerCase().trim();
+    const searchTerm = ($('#search-bar').val() || '').toLowerCase().trim();
+
+    $(`${getTBodySelector()} tr`).each(function () {
+      const $tr = $(this);
+      let ok = true;
+
+      // Position column filtering (OR across tokens typed e.g. "c rw" or "c,rw")
+      if (ok && POS_COL_INDEX !== null && posQuery) {
+        const parts = posQuery.split(/[,\s]+/).filter(Boolean);
+        const cellTextRaw = ($tr.find('td').eq(POS_COL_INDEX).text() || '').toLowerCase();
+        const tokens = cellTextRaw.replace(/\s+/g, '').split(',').filter(Boolean);
+        const matchAny = parts.some(p => tokens.some(t => t.includes(p)));
+        if (!matchAny) ok = false;
+      }
+
+      // Global search still applies (not a header filter)
+      if (ok && searchTerm) {
+        const all = $tr.text().toLowerCase();
+        ok = all.includes(searchTerm);
+      }
+
+      $tr.toggle(ok);
+    });
+
+    applyRanking();
+  }
+
+  function refreshUI() {
+    CURRENT_COLS = detectColumns();
+    ensureFilterRow();     // builds only Pos filter
+    bindSorting(CURRENT_COLS);
+    applyFilters();
+  }
+
+  // ---------------------------
+  // AJAX: Calculate Fantasy Points
+  // ---------------------------
+  $('#scoring-settings-form').on('submit', function (e) {
+    e.preventDefault();
+    const formData = $(this).serialize();
+
+    $.ajax({
+      type: 'POST',
+      url: '/calculate_fantasy_points',
+      data: formData,
+      success: function (response) {
+        $(`${getTBodySelector()}`).html(response); // returned <tr> rows
+        applyRanking();
+        refreshUI();
+      },
+      error: function (error) {
+        console.error('Error calculating fantasy points:', error);
+      }
+    });
+  });
+
+  // ---------------------------
+  // CSV Export (exports visible rows)
+  // ---------------------------
+  $('#export-csv').on('click', function () {
+    const tableSel = getTableSelector();
+    const tbodySel = getTBodySelector();
+
+    const tableData = [];
+    const headers = [];
+
+    $(`${tableSel} thead th`).each(function () {
+      headers.push($(this).text().trim());
+    });
+    tableData.push(headers);
+
+    $(`${tbodySel} tr:visible`).each(function () {
+      const rowData = [];
+      $(this).find('td').each(function () {
+        rowData.push($(this).text().trim());
+      });
+      tableData.push(rowData);
+    });
+
+    $.ajax({
+      type: 'POST',
+      url: '/export_csv',
+      contentType: 'application/json',
+      data: JSON.stringify({ tableData }),
+      xhrFields: { responseType: 'blob' },
+      success: function (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kubota_hockey_2024_2025.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      },
+      error: function (error) {
+        console.error('Error exporting CSV:', error);
+      }
+    });
+  });
+
+  // ---------------------------
+  // League-type defaults
+  // ---------------------------
+  $('#league-type').on('change', function () {
+    const leagueType = $(this).val();
+
+    if (leagueType === 'points') {
+      $('#g-points').val(6);
+      $('#a-points').val(4);
+      $('#sog-points').val(0.9);
+      $('#pim-points').val(0);
+      $('#plusminus-points').val(2);
+      $('#ppg-points').val(2);
+      $('#ppa-points').val(2);
+      $('#ppp-points').val(2);
+      $('#shg-points').val(0);
+      $('#sha-points').val(0);
+      $('#shp-points').val(0);
+      $('#blk-points').val(1);
+      $('#hit-points').val(0);
+      $('#fol-points').val(0);
+      $('#fow-points').val(0);
+      $('#defensive-points').val(1);
+    } else if (leagueType === 'categories') {
+      $('#g-points').val(1);
+      $('#a-points').val(1);
+      $('#sog-points').val(1);
+      $('#pim-points').val(0);
+      $('#plusminus-points').val(0);
+      $('#ppg-points').val(0);
+      $('#ppa-points').val(0);
+      $('#ppp-points').val(1);
+      $('#shg-points').val(0);
+      $('#sha-points').val(0);
+      $('#shp-points').val(0);
+      $('#blk-points').val(1);
+      $('#hit-points').val(1);
+      $('#fol-points').val(0);
+      $('#fow-points').val(0);
+      $('#defensive-points').val(0);
+    }
+  });
+
+  // ---------------------------
+  // Position grouping toggles
+  // ---------------------------
+  $('#position-grouping').on('change', function () {
+    const grouping = $(this).val();
+    if (grouping === 'fw_def') {
+      $('#roster-settings-split').hide();
+      $('#roster-settings-fwdef').show();
+    } else if (grouping === 'split') {
+      $('#roster-settings-split').show();
+      $('#roster-settings-fwdef').hide();
+    }
+  });
+
+  // ---------------------------
+  // Global search ties into filters
+  // ---------------------------
+  $('#search-bar').off('keyup').on('keyup', applyFilters);
+
+  // ---------------------------
+  // Initialize on page load
+  // ---------------------------
+  refreshUI();
 });
