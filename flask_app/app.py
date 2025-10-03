@@ -42,7 +42,7 @@ def _assert_table(conn_engine, table_name):
         ) from e
         
         
-LAST_UPDATE = "Sep 30, 2025"
+LAST_UPDATE = "Oct 3, 2025"
 
 # =============================================================================
 # HELPERS
