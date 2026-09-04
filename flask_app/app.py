@@ -42,7 +42,7 @@ def _assert_table(conn_engine, table_name):
         ) from e
         
         
-LAST_UPDATE = "Oct 3, 2025"
+LAST_UPDATE = "September 4, 2026"
 
 # =============================================================================
 # HELPERS
@@ -79,12 +79,12 @@ rename_map_stats = {
 }
 stats.rename(columns={k: v for k, v in rename_map_stats.items() if k in stats.columns}, inplace=True)
 
-# GPNEW = 82 * GP_Percent (fallback 82)
+# GPNEW = 84 * GP_Percent (fallback 84)
 if "GPNEW" not in stats.columns:
     if "GP_Percent" in stats.columns:
-        stats["GPNEW"] = (82 * pd.to_numeric(stats["GP_Percent"], errors="coerce")).clip(0, 82)
+        stats["GPNEW"] = (84 * pd.to_numeric(stats["GP_Percent"], errors="coerce")).clip(0, 84)
     else:
-        stats["GPNEW"] = 82.0
+        stats["GPNEW"] = 84.0
 stats["GPNEW"] = pd.to_numeric(stats["GPNEW"], errors="coerce").fillna(0.0)
 
 # Attach Image via roster (logo) by team (do NOT mix stats, only logos)
@@ -156,8 +156,8 @@ for c in ["gp_3", "gpg_3", "apg_3", "pts_pg_3", "pimpg_3"]:
     if c in R.columns:
         R[c] = pd.to_numeric(R[c], errors="coerce")
 
-# GP2 for totals = gp_3 (fallback 82)
-R["GP2"] = R.get("gp_3", 82).fillna(82).clip(lower=0, upper=82)
+# GP2 for totals = gp_3 (fallback 84)
+R["GP2"] = R.get("gp_3", 84).fillna(84).clip(lower=0, upper=84)
 
 # Normalize positions to legacy expectations
 R["Pos"] = R.get("Pos", "").replace({"W": "RW", "F": "C"})
@@ -351,7 +351,7 @@ def calculate_fantasy_points():
 
         # Season length
         season_length = request.form.get('season_length')
-        df_selected['GP'] = 82 if season_length == '82' else df_selected['GPNEW']
+        df_selected['GP'] = 84 if season_length == '84' else df_selected['GPNEW']
 
         # Convenience totals
         df_selected['PPP'] = df_selected['PPG'] + df_selected['PPA']

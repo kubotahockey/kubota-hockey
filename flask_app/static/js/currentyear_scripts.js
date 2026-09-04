@@ -203,7 +203,7 @@ $(document).ready(function () {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'kubota_hockey_2024_2025.csv';
+        a.download = 'kubota_hockey_2026_2027.csv';
         document.body.appendChild(a);
         a.click();
         a.remove();
