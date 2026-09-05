@@ -7,10 +7,11 @@
 <section class="hero">
   <div class="row align-items-center">
     <div class="col-lg-5">
-      <h1>See where every skater is headed.</h1>
+      <h1>Every skater, seven years out.</h1>
       <p class="hero-lede">
-        We find the players in NHL history who developed most like each skater, 
-        then use their actual career paths to project the next seven seasons.
+        We match every skater to the players in history who looked most like him,
+        then age him the way those players actually aged. Crosby at 37 has never
+        declined like an average 37-year-old. Most projections assume he will.
       </p>
       <div class="hero-actions">
         <a href="{{ url_for('currentyear') }}" class="btn btn-primary">See this season's projections</a>
@@ -96,21 +97,44 @@
   </a>
 </div>
 
+<div class="zone-line">
+  <h2>Inside the pages</h2>
+  <p class="zone-note">A look at the pages</p>
+</div>
+
+<div class="row">
+  <div class="col-md-4 mb-4">
+    <a class="shot-frame" href="{{ url_for('currentyear') }}">
+      <img src="{{ url_for('static', filename='images/currentyear.PNG') }}" alt="The current-season projections table with fantasy scoring settings" loading="lazy">
+    </a>
+  </div>
+  <div class="col-md-4 mb-4">
+    <a class="shot-frame" href="{{ url_for('player_page') }}">
+      <img src="{{ url_for('static', filename='images/playerpage.PNG') }}" alt="A player dashboard showing the seven-year curve and comparables" loading="lazy">
+    </a>
+  </div>
+  <div class="col-md-4 mb-4">
+    <a class="shot-frame" href="{{ url_for('forecasts') }}">
+      <img src="{{ url_for('static', filename='images/sevenyear.PNG') }}" alt="The seven-year projection table for all skaters" loading="lazy">
+    </a>
+  </div>
+</div>
 
 <div class="zone-line">
-  <h2>Happening Hockey</h2>
+  <h2>What's Happening Hockey</h2>
   <p class="zone-note">The channel</p>
 </div>
 
 <div class="row align-items-center">
   <div class="col-md-7 mb-4">
-    <a class="shot-frame" href="https://www.youtube.com/@HappeningHockey" target="_blank" rel="noopener">
+    <a class="shot-frame" href="https://www.youtube.com/@WhatsHappeningHockey" target="_blank" rel="noopener">
       <img src="{{ url_for('static', filename='images/WHH.PNG') }}" alt="What's Happening Hockey YouTube channel" loading="lazy">
     </a>
   </div>
   <div class="col-md-5 mb-4">
-    <p>GM deep dives and tales of the game.</p>
-    <a href="https://www.youtube.com/@HappeningHockey" class="btn btn-primary" target="_blank" rel="noopener">Watch on YouTube</a>
+    <p>Where the model disagrees with everyone else, and why. Plus the week's
+       hockey news.</p>
+    <a href="https://www.youtube.com/@WhatsHappeningHockey" class="btn btn-primary" target="_blank" rel="noopener">Watch on YouTube</a>
   </div>
 </div>
 {% endblock %}

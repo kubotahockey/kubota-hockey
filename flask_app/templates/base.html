@@ -6,7 +6,7 @@
     <title>{% block title %}Kubota Hockey{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Seven-year statistical projections for professional hockey players, built from historical comparables.{% endblock %}">
     <meta name="theme-color" content="#071a2b">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="icon" type="image/png" href="{{ static_v('favicon.png') }}">
 
     <!-- Type: Barlow Condensed for scoreboard numerals and headings, Inter for data -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +20,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ static_v('css/styles.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
 <body>

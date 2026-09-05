@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, url_for
 from werkzeug.datastructures import MultiDict
 from flask.json.provider import DefaultJSONProvider
 import pandas as pd
@@ -40,6 +40,24 @@ class SafeJSONProvider(DefaultJSONProvider):
 
 
 app.json = SafeJSONProvider(app)
+
+
+# -----------------------------------------------------------------------------
+# Static asset versioning
+# -----------------------------------------------------------------------------
+# Browsers and proxies cache /static/css/styles.css aggressively. After a deploy
+# that means the server has the new CSS but visitors keep the old one, which is
+# the usual reason a live site looks nothing like the dev machine it was built
+# on. Stamping each URL with the file's modification time makes the URL change
+# whenever the file does, so the cache is bypassed exactly when it should be.
+@app.template_global()
+def static_v(filename):
+    url = url_for('static', filename=filename)
+    try:
+        stamp = int(os.path.getmtime(BASE_DIR / 'static' / filename))
+    except OSError:
+        return url
+    return f'{url}?v={stamp}'
 
 
 def _records(frame):
