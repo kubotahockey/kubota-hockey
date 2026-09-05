@@ -1,27 +1,32 @@
 {% extends 'base.html' %}
 
-{% block title %}Team Overview{% endblock %}
+{% block title %}{{ team_name }} outlook — Kubota Hockey{% endblock %}
+{% block meta_description %}How each NHL organisation's skaters project over the next seven years, and where that ranks league-wide.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
 
 {% block content %}
 <div class="row">
     <!-- Team Rankings Sidebar -->
-    <div class="col-md-3">
-        <div class="card bg-dark text-light mb-4">
+    <div class="col-lg-3 mb-4">
+        <div class="card">
             <div class="card-header">
-                <h4 class="text-white mb-0">7 Year Rank (PTS/GP)</h4>
+                <h4 class="mb-0">Seven-year rank</h4>
+                <span class="text-muted" style="font-size:.75rem;">Points per game</span>
             </div>
             <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
+                <ul class="list-group list-group-flush" style="max-height:70vh;overflow-y:auto;">
                     {% for team in teams_ranked %}
-                    <li class="list-group-item bg-dark text-light">
-                        <a href="{{ url_for('teams_overview', team=team['Team']) }}" class="text-light d-flex align-items-center">
-                            <img src="{{ url_for('static', filename='images/logo_teams/' + team['Image']) }}" 
-                                 alt="{{ team['Team'] }} Logo" 
-                                 class="team-logo-sm mr-2">
-                            <div class="d-flex flex-column">
-                                <span>{{ team['Rank'] }}. {{ team['Team'] }}</span>
-                                <span class="text-muted">{{ team['PTSPERG']}} Points</span>
-                            </div>
+                    <li class="list-group-item">
+                        <a href="{{ url_for('teams_overview', team=team['Team']) }}"
+                           class="d-flex align-items-center team-rankings-sm"
+                           style="color: {% if team['Team'] == team_name %}var(--green){% else %}var(--ice){% endif %};">
+                            <span class="rank-cell" style="min-width:1.6rem;">{{ team['Rank'] }}</span>
+                            <img src="{{ url_for('static', filename='images/logo_teams/' + team['Image']) }}"
+                                 alt="" class="team-logo-sm" onerror="this.style.visibility='hidden'">
+                            <span class="d-flex flex-column" style="min-width:0;">
+                                <span>{{ team['Team'] }}</span>
+                                <span class="text-muted">{{ team['PTSPERG'] }} pts/gp</span>
+                            </span>
                         </a>
                     </li>
                     {% endfor %}
@@ -31,260 +36,229 @@
     </div>
 
     <!-- Team Insights Section -->
-    <div class="col-md-9">
-    <div class="team-insights">
-        <div class="team-header d-flex align-items-center mb-3">
-            <img src="{{ url_for('static', filename='images/logo_teams/' + team_logo) }}" 
-                 alt="{{ team_name }} Logo" 
-                 class="team-logo mr-3">
-            <h1>{{ team_name }}: 7 Year Outlook</h1>
-        </div>
-        
-        <!-- 7 Year Projection Chart -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <canvas id="teamProjectionsChart"></canvas>
+    <div class="col-lg-9">
+        <div class="team-insights">
+            <div class="team-header d-flex align-items-center mb-4" style="gap:1rem;">
+                <img src="{{ url_for('static', filename='images/logo_teams/' + team_logo) }}"
+                     alt="" class="team-logo" onerror="this.style.display='none'">
+                <div style="flex:1 1 auto;">
+                    <h1>{{ team_name }}</h1>
+                    <span class="text-muted">Ranked {{ total_team_rank }} of 32 over seven years</span>
+                </div>
+                <div class="form-group mb-0" style="min-width:220px;">
+                    <label for="teamPicker">Jump to a team</label>
+                    <select class="form-control" id="teamPicker">
+                        {% for t in teams_available %}
+                        <option value="{{ url_for('teams_overview', team=t) }}"
+                                {% if t == team_name %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-        </div>
 
-        <!-- Bar Chart for Team Rankings -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <canvas id="teamRankingBarChart"></canvas>
+            <!-- Headline numbers -->
+            <div class="row mb-4">
+                <div class="col-6 col-md-3 mb-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">Overall</div>
+                        <p class="stat-value">{{ total_team_rank }}<span style="font-size:1rem;color:var(--fog);">/32</span></p>
+                        <div class="stat-sub">{{ total_team_pts_gp }} pts/gp</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">Forwards</div>
+                        <p class="stat-value">{{ fw_rank }}<span style="font-size:1rem;color:var(--fog);">/32</span></p>
+                        <div class="stat-sub">{{ fw_pts_gp }} pts/gp</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">Defence</div>
+                        <p class="stat-value">{{ def_rank }}<span style="font-size:1rem;color:var(--fog);">/32</span></p>
+                        <div class="stat-sub">{{ def_pts_gp }} pts/gp</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 mb-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">Under 23 forwards</div>
+                        <p class="stat-value">{{ fw_rank_under_23 }}<span style="font-size:1rem;color:var(--fog);">/32</span></p>
+                        <div class="stat-sub">Youth in the system</div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Leaderboard with FW_DEF Column and Age -->
-        <div class="leaderboard mb-3">
-            <h3>Player Leaderboard (Sorted by Points)</h3>
-            <table class="table table-dark table-striped">
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>Position</th>
-                        <th>Age</th>
-                        <th>Games Played</th>
-                        <th>Goals</th>
-                        <th>Assists</th>
-                        <th>Points</th>
-                        <th>Penalty Minutes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for player in leaderboard_data %}
-                    <tr>
-                        <td><a href="{{ url_for('player_page', player=player['name']) }}">{{ player['name'] }}</a></td>
-                        <td>{{ player['fw_def'] }}</td>
-                        <td>{{ player['age'] }}</td>
-                        <td>{{ player['GP2'] }}</td>
-                        <td>{{ player['GTOT'] }}</td>
-                        <td>{{ player['ATOT'] }}</td>
-                        <td>{{ player['PTSTOT'] }}</td>
-                        <td>{{ player['PIM'] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- 7 Year Projection Chart -->
+            <div class="chart-panel mb-4">
+                <div class="hero-chart-head">
+                    <strong>Points per game, next seven years</strong>
+                    <span>Team average against the rest of the league</span>
+                </div>
+                <div style="position:relative;height:340px;">
+                    <canvas id="teamProjectionsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar Chart for Team Rankings -->
+            <div class="chart-panel mb-4">
+                <div class="hero-chart-head">
+                    <strong>Rank by group</strong>
+                    <span>Longer is better. 1 is best in the league.</span>
+                </div>
+                <div style="position:relative;height:280px;">
+                    <canvas id="teamRankingBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Leaderboard with FW_DEF Column and Age -->
+            <div class="zone-line">
+                <h2>Skaters</h2>
+                <p class="zone-note">Seven-year totals</p>
+            </div>
+            <div class="table-responsive table-scroll">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Player</th>
+                            <th class="t">Pos</th>
+                            <th>Age</th>
+                            <th>GP</th>
+                            <th>G</th>
+                            <th>A</th>
+                            <th>PTS</th>
+                            <th>PIM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in leaderboard_data %}
+                        <tr>
+                            <td class="rank-cell">{{ loop.index }}</td>
+                            <td><a href="{{ url_for('player_page', player=player['name']) }}">{{ player['name'] }}</a></td>
+                            <td class="t"><span class="badge-pos">{{ player['fw_def'] }}</span></td>
+                            <td>{{ player['age'] }}</td>
+                            <td>{{ player['GP2'] | round(0) | int }}</td>
+                            <td>{{ player['GTOT'] | round(0) | int }}</td>
+                            <td>{{ player['ATOT'] | round(0) | int }}</td>
+                            <td>{{ player['PTSTOT'] | round(0) | int }}</td>
+                            <td>{{ player['PIM'] | round(0) | int }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const rankingCtx = document.getElementById('teamRankingBarChart').getContext('2d');
-    const projectionCtx = document.getElementById('teamProjectionsChart').getContext('2d');
-
-    // Bar Chart Data and Options
-    const rankingData = {
-        labels: ['Total System', 'All FW', 'All DEF', 'Top 12 FW', 'Top 6 DEF', 'U23 FW', 'U23 DEF'],
-        datasets: [{
-            data: [32 - {{ total_team_rank }},
-                   32 - {{ fw_rank }},
-                   32 - {{ def_rank }},
-                   32 - {{ top_12_fw_rank }},
-                   32 - {{ top_6_def_rank }},
-                   32 - {{ fw_rank_under_23 }},
-                   32 - {{ def_rank_under_23 }}],
-            backgroundColor: 'rgba(46, 204, 113, 1)',
-            borderColor: 'rgba(46, 204, 113, 1)',
-            borderWidth: 2
-        }]
-    };
-    
-    const rankingOptions = {
-        indexAxis: 'y',
-        scales: {
-            x: {
-                beginAtZero: true,
-                max: 32,
-                reverse: false,  // Set reverse to false to keep 32 on the left
-                ticks: {
-                    color: 'white',
-                    stepSize: 1,
-                    callback: function(value) {
-                        return 32 - value;  // Adjust the labels to show 32 to 1
-                    }
-                },
-                grid: {
-                    color: 'rgba(77, 77, 77, 0.8)'
-                }
-            },
-            y: {
-                ticks: {
-                    color: 'white'
-                },
-                grid: {
-                    color: 'rgba(77, 77, 77, 0.8)'
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(tooltipItem) {
-                        return `Rank: ${32 - tooltipItem.raw}`;
-                    }
-                }
-            },
-            title: {  // Adding the title plugin
-                display: true,
-                text: 'System 7 Year Rankings per Category',
-                color: 'white',
-                font: {
-                    size: 18
-                }
-            }
-        }
-    };
-    
-    new Chart(rankingCtx, {
-        type: 'bar',
-        data: rankingData,
-        options: rankingOptions
-    });
-
-        // Line Chart Data and Options
-        const projectionData = {
-            labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7'],
-            datasets: [
-                {
-                    label: '{{ team_name }} Projections',
-                    data: {{ pts_projections }},
-                    borderColor: 'rgba(46, 204, 113, 1)', // Teal for main team
-                    backgroundColor: 'rgba(46, 204, 113, 0)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointStyle: 'circle',
-                    pointRadius: 6,
-                    showLine: true
-                },
-                {
-                    label: 'Top Team Projections',
-                    data: {{ top_team_projections }},
-                    borderColor: 'rgba(255, 255, 0, 1)', // Yellow
-                    borderWidth: 1,
-                    fill: false,
-                    tension: 0.4,
-                    pointStyle: 'circle',
-                    pointRadius: 5,
-                    showLine: true,
-                    borderDash: [5, 5] // Dotted line for top team
-                },
-                {
-                    label: 'Lowest Team Projections',
-                    data: {{ lowest_team_projections }},
-                    borderColor: 'rgba(255, 105, 97, 1)', // Red
-                    borderWidth: 1,
-                    fill: false,
-                    tension: 0.4,
-                    pointStyle: 'circle',
-                    pointRadius: 5,
-                    showLine: true,
-                    borderDash: [5, 5] // Dotted line for lowest team
-                },
-                {
-                    label: 'League Average Projections',
-                    data: {{ league_average_projections }},
-                    borderColor: 'rgba(255, 179, 71, 1)', // Orange
-                    borderWidth: 1,
-                    fill: false,
-                    tension: 0.4,
-                    pointStyle: 'circle',
-                    pointRadius: 5,
-                    showLine: true,
-                    borderDash: [5, 5] // Dotted line for league average
-                }
-            ]
-        };
-
-        const projectionOptions = {
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    max: 0.5,  // Set max value to 0.5
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        callback: function(value) { return value.toFixed(2); }
-                    },
-                    grid: {
-                        color: 'rgba(77, 77, 77, 0.8)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    },
-                    grid: {
-                        color: 'rgba(77, 77, 77, 0.8)'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: {
-                        color: 'white',
-                        usePointStyle: true
-                    }
-                },
-                title: {
-                    display: true,
-                    text: '7 Year Point per Game Projection',
-                    color: 'white',
-                    font: {
-                        size: 16
-                    }
-                },
-                tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        label: function(tooltipItem) {
-                            return `${tooltipItem.dataset.label}: ${tooltipItem.raw.toFixed(2)}`;
-                        }
-                    }
-                }
-            },
-            responsive: true,
-            maintainAspectRatio: false
-        };
-
-        // Increase the height of the line chart by modifying the canvas height
-        document.getElementById('teamProjectionsChart').height = 500;
-
-        new Chart(projectionCtx, {
-            type: 'line',
-            data: projectionData,
-            options: projectionOptions
-        });
-    });
-</script>
-
-
-
 {% endblock %}
 
+{% block extra_scripts %}
+<script id="teamData" type="application/json">
+{{ {
+  'team': team_name,
+  'pts': pts_projections,
+  'top': top_team_projections,
+  'low': lowest_team_projections,
+  'avg': league_average_projections,
+  'topName': top_team_name,
+  'lowName': lowest_team_name,
+  'ranks': [total_team_rank, fw_rank, def_rank, top_12_fw_rank,
+            top_6_def_rank, fw_rank_under_23, def_rank_under_23]
+} | tojson }}
+</script>
+<script>
+(function () {
+    var d = JSON.parse(document.getElementById('teamData').textContent);
+    var K = window.KUBOTA;
+
+    var picker = document.getElementById('teamPicker');
+    if (picker) picker.addEventListener('change', function () { window.location = this.value; });
+
+    // ---- Rank by group -------------------------------------------------
+    var rankEl = document.getElementById('teamRankingBarChart');
+    if (rankEl && window.Chart) {
+        // Bars are drawn as (33 - rank) so that rank 1 is the longest bar.
+        var labels = ['Whole roster', 'All forwards', 'All defence',
+                      'Top 12 forwards', 'Top 6 defence', 'U23 forwards', 'U23 defence'];
+        var ranks = d.ranks.map(function (r) { return r || 0; });
+
+        new Chart(rankEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: ranks.map(function (r) { return r ? 33 - r : 0; }),
+                    backgroundColor: ranks.map(function (r) {
+                        return (r && r <= 10) ? K.green : K.crease;
+                    }),
+                    borderWidth: 0,
+                    borderRadius: 2,
+                    barThickness: 14
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true, max: 32,
+                        ticks: { stepSize: 8, callback: function (v) { return v === 0 ? '' : (33 - v); } },
+                        grid: { color: K.line }, border: { display: false }
+                    },
+                    y: { grid: { display: false }, border: { color: K.line } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (t) {
+                        var r = ranks[t.dataIndex];
+                        return r ? 'Rank ' + r + ' of 32' : 'No qualifying skaters';
+                    } } }
+                }
+            }
+        });
+    }
+
+    // ---- Seven-year curve ----------------------------------------------
+    var projEl = document.getElementById('teamProjectionsChart');
+    if (projEl && window.Chart) {
+        var ghost = function (colour, label, data) {
+            return {
+                label: label, data: data, borderColor: colour, borderWidth: 1,
+                borderDash: [5, 5], pointRadius: 2, tension: .35, fill: false
+            };
+        };
+        new Chart(projEl.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Yr 1','Yr 2','Yr 3','Yr 4','Yr 5','Yr 6','Yr 7'],
+                datasets: [
+                    {
+                        label: d.team, data: d.pts,
+                        borderColor: K.green, backgroundColor: 'rgba(0,230,118,.08)',
+                        borderWidth: 3, pointRadius: 4, pointBackgroundColor: K.green,
+                        tension: .35, fill: true
+                    },
+                    ghost(K.gold, 'Best: ' + d.topName, d.top),
+                    ghost(K.fog, 'League average', d.avg),
+                    ghost(K.goal, 'Worst: ' + d.lowName, d.low)
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: K.line }, border: { display: false } },
+                    x: { grid: { display: false }, border: { color: K.line } }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: function (t) {
+                        return t.dataset.label + ': ' + (t.raw == null ? '—' : Number(t.raw).toFixed(2));
+                    } } }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

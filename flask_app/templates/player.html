@@ -1,67 +1,74 @@
 {% extends "base.html" %}
-{% block title %}Player Dashboard - Kubota Hockey{% endblock %}
+{% block title %}Player dashboard — Kubota Hockey{% endblock %}
+{% block meta_description %}One skater at a time: the seven-year projection curve, the closest historical comparables, and percentile rank against the league.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="text-center text-white mb-4"><i class="fas fa-user"></i> Player Dashboard</h1>
-
-    <!-- General information at the top -->
-    <p class="text-center text-light mb-4">
-        All stats are adjusted to be NHL equivalent (NHLe) to place everyone on the same level for comparison purposes. This is how players would hypothetically perform at the NHL level over the next 7 seasons.
+<div class="page-head">
+    <h1>Player dashboard</h1>
+    <p class="lede">
+        What this skater projects to do at the NHL level over the next seven seasons.
+        Everything is NHL-equivalent, so players from different leagues sit on the
+        same scale.
     </p>
-
-    <!-- Player search section -->
-    <div class="form-group text-center">
-        <label for="playerSearch" class="text-white">Search for a Player:</label>
-        <input type="text" class="form-control bg-dark text-light mx-auto" id="playerSearch" placeholder="Enter player name..." title="Type to search for a player" style="max-width: 500px;">
-        <ul class="list-group bg-dark mt-2 mx-auto" id="searchResults" style="max-width: 500px;"></ul>
-    </div>
-
-    <!-- Player chart section -->
-    <div class="row mb-4">
-        <div class="col-sm-12">
-            <p class="text-center text-light">7-year forecast plotted alongside the player's top 3 historical comparable players</p>
-        </div>
-        <div class="col-sm-4" id="playerStats"></div>
-        <div class="col-sm-8" id="playerChart"></div>
-    </div>
-
-    <!-- Player projections section -->
-    <div class="row mb-4">
-        <div class="col-sm-12">
-            <h4 class="text-center text-light mt-3 mb-3">Raw NHLe stat projections over the next 7 years<h4>
-        </div>
-        <div id="playerProjections" class="col-sm-12"></div>
-    </div>
-    
-
-
-    <!-- Player comparables section -->
-    <h2 class="text-center text-white mt-4">Player Comparables</h2>
-    <div class="col-sm-12 mb-4">
-        <p class="text-center text-light">Top 10 comparables with their NHLe stats over the next 7 year timeframe</p>
-    </div>
-    <div id="playerComparisons" class="row mt-4"></div>
-    
 </div>
 
-<!-- Link to global stylesheet -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<div class="filter-bar">
+    <div class="form-group" style="flex:1 1 340px;position:relative;">
+        <label for="playerSearch">Search for a player</label>
+        <input type="text" class="form-control" id="playerSearch" autocomplete="off"
+               placeholder="Start typing a name&hellip;">
+        <ul class="list-group mt-1" id="searchResults"
+            style="position:absolute;z-index:30;width:100%;max-width:460px;"></ul>
+    </div>
+    <div class="form-group">
+        <label>&nbsp;</label>
+        <div>
+            <button id="exportButton" type="button" class="btn btn-outline-light">
+                <i class="fas fa-image"></i> Save as image
+            </button>
+        </div>
+    </div>
+</div>
 
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="row mb-4">
+    <div class="col-lg-4 mb-3" id="playerStats"></div>
+    <div class="col-lg-8">
+        <div class="chart-panel">
+            <div class="hero-chart-head">
+                <strong>Points per game</strong>
+                <span>Against his three closest matches from history</span>
+            </div>
+            <div id="playerChart" style="position:relative;height:340px;"></div>
+        </div>
+    </div>
+</div>
 
-<!-- Include custom scripts -->
-<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+<div class="zone-line">
+    <h2>Seven-year totals</h2>
+    <p class="zone-note">Seven years, NHL-equivalent</p>
+</div>
+<div id="playerProjections" class="row"></div>
 
+<div class="zone-line">
+    <h2>Where he ranks</h2>
+    <p class="zone-note">Percentile against everyone at his position</p>
+</div>
+<div id="playerPercentiles" class="row"></div>
+
+<div class="zone-line">
+    <h2>Closest historical comparables</h2>
+    <p class="zone-note">Top ten matches and what they actually did</p>
+</div>
+<div id="playerComparisons" class="table-responsive"></div>
+{% endblock %}
+
+{% block extra_scripts %}
 <!-- Pass the players list to JavaScript -->
 <script id="playersList" type="application/json">{{ players | tojson }}</script>
-
 <!-- Pass the random player name to JavaScript -->
 <script id="randomPlayerName" type="application/json">{{ random_player | tojson }}</script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.3.2/dist/html2canvas.min.js"></script>
-
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 {% endblock %}

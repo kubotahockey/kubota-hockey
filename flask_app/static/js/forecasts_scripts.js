@@ -5,10 +5,14 @@ document.addEventListener('DOMContentLoaded', function () {
     pageLength: 15,
     lengthChange: false,
     searching: true,
+    // The page supplies its own search field in the filter bar, so hide
+    // DataTables' built-in one rather than showing two.
+    dom: 'rtip',
     ordering: true,
     order: [[6, 'desc']], // PTS desc
     columnDefs: [
-      { targets: '_all', className: 'dt-body-center' },
+      // Word columns left, numbers right; the stylesheet handles the rest.
+      { targets: [0, 1], className: 't' },
       // use data-order when present, fallback to text
       { targets: [3, 4, 5, 6, 7, 8, 9], orderDataType: 'dom-data-order' }
     ],
@@ -143,9 +147,11 @@ function initializeBarCharts() {
     const column = d3.select(this).attr('data-column');
     const maxValue = maxValues[column];
 
+    // Ramp runs from the structural blue up to the brand green, matching the
+    // rest of the site's data colours.
     const colorScale = d3.scaleLinear()
       .domain([0, maxValue])
-      .range(['#24155A', '#00e676']);
+      .range(['#2b6f9c', '#00e676']);
     const color = colorScale(value);
 
     d3.select(this).selectAll('canvas').remove();
@@ -189,8 +195,8 @@ function initializeBarCharts() {
       .style('top', '0')
       .style('width', canvasWidth + 'px')
       .style('text-align', 'center')
-      .style('color', '#fff')
-      .style('font-size', '14px')
+      .style('color', '#eaf2f8')
+      .style('font-size', '12px')
       .text(value);
   });
 }

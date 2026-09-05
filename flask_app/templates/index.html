@@ -1,66 +1,168 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Kubota Hockey{% endblock %}
+{% block title %}Kubota Hockey — seven-year NHL projections{% endblock %}
+{% block meta_description %}Kubota Hockey projects every NHL-affiliated skater seven years out by matching them to the historical players they most resemble.{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="jumbotron text-center bg-dark text-light">
-        <h1 class="display-4"><i class="fas fa-hockey-puck"></i> <strong>Welcome to KUBOTA HOCKEY</strong></h1>
-        <p class="lead">Kubota Hockey is committed to delivering top-notch statistical projections for players in professional leagues worldwide. By identifying historical comparables for today's players, Kubota Hockey offers valuable context to the future stars of both today and tomorrow.</p>
-        <hr class="my-4">
-    </div>
-    
-    <div class="currentyear-section text-center mt-5">
-        <h3 class="text-white mb-4">Current Year Projections</h3>
-        <div>
-            <p>Access NHL specific projections for the 2025/2026 season and tailor to your own specific league settings</p>
+<section class="hero">
+  <div class="row align-items-center">
+    <div class="col-lg-5">
+      <h1>See where every skater is headed.</h1>
+      <p class="hero-lede">
+        We find the players in NHL history who developed most like each skater, 
+        then use their actual career paths to project the next seven seasons.
+      </p>
+      <div class="hero-actions">
+        <a href="{{ url_for('currentyear') }}" class="btn btn-primary">See this season's projections</a>
+        <a href="{{ url_for('player_page') }}" class="btn btn-outline-light">Look up a player</a>
+      </div>
+
+      <div class="hero-metrics">
+        <div class="metric">
+          <div class="n">{{ '{:,}'.format(n_players) }}</div>
+          <div class="l">Skaters projected</div>
         </div>
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                <img src="{{ url_for('static', filename='images/currentyear.png') }}" class="img-fluid" alt="NHL Team Insights">
-            </div>
+        <div class="metric">
+          <div class="n">{{ '{:,}'.format(n_comps) }}</div>
+          <div class="l">Historical matches</div>
         </div>
-        <a href="{{ url_for('currentyear') }}" class="btn btn-primary" data-toggle="tooltip" title="View current year projections">View Skater Projections</a>
-    </div>
-    
-    
-    <div class="player-section text-center">
-        <h3 class="text-white mb-4">Player Pages</h3>
-        <div class="row">
-            <p>Access individual player cards for over 2,000 players from across the globe. The player dashboard provides the players 7 year projection plotted alongside their top 3 historical comparables, their top 10 player comparables, and percentile rankings.</p>
+        <div class="metric">
+          <div class="n">1963</div>
+          <div class="l">Earliest season used</div>
         </div>
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                <img src="{{ url_for('static', filename='images/playerpage.png') }}" class="img-fluid" alt="NHL Team Insights">
-            </div>
-        </div>
-        <a href="{{ url_for('player_page') }}" class="btn btn-primary mb-4" data-toggle="tooltip" title="View individual player stats">View Player Page</a>
+      </div>
     </div>
 
-    <div class="forecast-section text-center mt-5">
-        <h3 class="text-white mb-4">7 Year Projections</h3>
-        <div>
-            <p>7 year projections for all players in our database.</p>
+    <div class="col-lg-7 mt-5 mt-lg-0">
+      {% if featured %}
+      <div class="hero-chart">
+        <div class="hero-chart-head">
+          <div>
+            <strong>{{ featured.name }}</strong>
+            <span>&nbsp;{{ featured.team }}{% if featured.age %} &middot; age {{ featured.age }}{% endif %}</span>
+          </div>
+          <span>Points per game, projected</span>
         </div>
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                        <img src="{{ url_for('static', filename='images/sevenyear.png') }}" class="img-fluid" alt="NHL Team Insights">
-            </div>
-        </div>
-        <a href="{{ url_for('forecasts') }}" class="btn btn-primary" data-toggle="tooltip" title="View detailed forecasts for hockey players">View Projections</a>
+        <div class="hero-canvas-wrap"><canvas id="heroChart"></canvas></div>
+      </div>
+      <p class="text-muted mt-2" style="font-size:.8rem;">
+        Solid line is the projection. Faint lines are his three closest matches from
+        history. The projection comes out of what those three went on to do.
+      </p>
+      {% endif %}
     </div>
+  </div>
+</section>
 
-    <!-- YouTube Channel Section -->
-    <div class="youtube-section text-center mt-5">
-        <h3 class="text-white mb-4">Check Out Our YouTube Channel</h3>
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                <a href="https://www.youtube.com/@WhatsHappeningHockey" target="_blank">
-                    <img src="{{ url_for('static', filename='images/WHH.png') }}" class="img-fluid" alt="YouTube Channel">
-                </a>
-            </div>
-        </div>
-        <a href="https://www.youtube.com/your-channel-link" class="btn btn-primary" target="_blank" data-toggle="tooltip" title="Visit our YouTube channel">Visit YouTube Channel</a>
-    </div>
+<div class="zone-line">
+  <h2>What you can do here</h2>
 </div>
+
+<div class="feature-grid">
+  <a class="feature" href="{{ url_for('currentyear') }}">
+    <i class="fas fa-calendar-alt feature-icon"></i>
+    <h3>This season</h3>
+    <p>Every NHL skater projected for the full season, scored with your league's settings and ranked by value over replacement.</p>
+  </a>
+  <a class="feature" href="{{ url_for('player_page') }}">
+    <i class="fas fa-user feature-icon"></i>
+    <h3>Player pages</h3>
+    <p>The seven-year curve for one skater, his ten closest matches from history, and how he stacks up at his position.</p>
+  </a>
+  <a class="feature" href="{{ url_for('leaders') }}">
+    <i class="fas fa-trophy feature-icon"></i>
+    <h3>Leaders</h3>
+    <p>Projected category leaders for the coming season. Filter by team or position.</p>
+  </a>
+  <a class="feature" href="{{ url_for('compare') }}">
+    <i class="fas fa-code-branch feature-icon"></i>
+    <h3>Compare</h3>
+    <p>Up to four skaters on the same axis, two years of history and seven projected.</p>
+  </a>
+  <a class="feature" href="{{ url_for('teams_overview') }}">
+    <i class="fas fa-users feature-icon"></i>
+    <h3>Team outlook</h3>
+    <p>Where a team's skaters project over seven years, and how that ranks league-wide.</p>
+  </a>
+  <a class="feature" href="{{ url_for('value') }}">
+    <i class="fas fa-dollar-sign feature-icon"></i>
+    <h3>Contract value</h3>
+    <p>Cap hit against projected points. Who is earning the money and who isn't.</p>
+  </a>
+  <a class="feature" href="{{ url_for('trade') }}">
+    <i class="fas fa-exchange-alt feature-icon"></i>
+    <h3>Fantasy trade analyzer</h3>
+    <p>Price a trade with your own league's scoring, in points or categories.</p>
+  </a>
+</div>
+
+
+<div class="zone-line">
+  <h2>Happening Hockey</h2>
+  <p class="zone-note">The channel</p>
+</div>
+
+<div class="row align-items-center">
+  <div class="col-md-7 mb-4">
+    <a class="shot-frame" href="https://www.youtube.com/@HappeningHockey" target="_blank" rel="noopener">
+      <img src="{{ url_for('static', filename='images/WHH.PNG') }}" alt="What's Happening Hockey YouTube channel" loading="lazy">
+    </a>
+  </div>
+  <div class="col-md-5 mb-4">
+    <p>GM deep dives and tales of the game.</p>
+    <a href="https://www.youtube.com/@HappeningHockey" class="btn btn-primary" target="_blank" rel="noopener">Watch on YouTube</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if featured %}
+<script id="heroData" type="application/json">{{ featured | tojson }}</script>
+<script>
+(function () {
+  var el = document.getElementById('heroChart');
+  if (!el || !window.Chart) return;
+  var d = JSON.parse(document.getElementById('heroData').textContent);
+  var K = window.KUBOTA;
+  var labels = ['Yr 1','Yr 2','Yr 3','Yr 4','Yr 5','Yr 6','Yr 7'];
+
+  var sets = d.comps.map(function (c) {
+    return {
+      label: c.name, data: c.curve,
+      borderColor: 'rgba(147,174,196,.45)', borderWidth: 1,
+      borderDash: [4,4], pointRadius: 0, tension: .35, fill: false
+    };
+  });
+  sets.push({
+    label: d.name, data: d.curve,
+    borderColor: K.green, backgroundColor: 'rgba(0,230,118,.08)',
+    borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: K.green,
+    tension: .35, fill: true
+  });
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  new Chart(el.getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: sets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: reduce ? false : { duration: 900, easing: 'easeOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: function (v) { return v.toFixed(1); } },
+             grid: { color: K.line }, border: { display: false } },
+        x: { grid: { display: false }, border: { color: K.line } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 8, padding: 12 } },
+        tooltip: { callbacks: { label: function (t) {
+          return t.dataset.label + ': ' + (t.raw == null ? '—' : Number(t.raw).toFixed(2));
+        } } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

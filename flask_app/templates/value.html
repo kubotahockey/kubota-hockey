@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Contract value — Kubota Hockey{% endblock %}
+{% block meta_description %}Cap hit measured against seven-year projected points, filterable by team, age, salary and contract length.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
+
+{% macro sort_link(key, label, extra='') -%}
+  {%- set is_on = (sort_key == key) -%}
+  {%- set next_dir = 'desc' if (is_on and direction == 'asc') else ('asc' if is_on else '') -%}
+  <a href="{{ url_for('value', sort=key, dir=next_dir, limit=limit,
+                      pos=f.pos, team=f.team, expiry=f.expiry,
+                      age_min=f.age_min, age_max=f.age_max,
+                      cap_min=f.cap_min, cap_max=f.cap_max, min_pts=f.min_pts) }}"
+     class="sort-link {{ 'is-on' if is_on }}">{{ label }}{% if is_on %}<span class="sort-arrow">{{ '▲' if direction == 'asc' else '▼' }}</span>{% endif %}</a>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Contract value</h1>
+  <p class="lede">
+    Cap hit divided by projected seven-year points. Cheaper per point means the team
+    is getting more for its money. The index puts the league median at 100, so
+    anything over 100 beats the median and anything under it trails.
+  </p>
+</div>
+
+<form class="settings-panel" method="get">
+  <h5 class="panel-title">Filters</h5>
+  <div class="form-row">
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label for="pos">Position</label>
+      <select class="form-control" id="pos" name="pos">
+        <option value="">All skaters</option>
+        <option value="FW"  {% if f.pos == 'FW'  %}selected{% endif %}>Forwards</option>
+        <option value="DEF" {% if f.pos == 'DEF' %}selected{% endif %}>Defence</option>
+      </select>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-3">
+      <label for="team">Team</label>
+      <select class="form-control" id="team" name="team">
+        <option value="">Every team</option>
+        {% for t in teams_list %}
+        <option value="{{ t }}" {% if f.team == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label for="expiry">Expires by</label>
+      <select class="form-control" id="expiry" name="expiry">
+        <option value="">Any year</option>
+        {% for e in expiries %}
+        <option value="{{ e }}" {% if f.expiry == e %}selected{% endif %}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label>Age</label>
+      <div class="range-pair">
+        <input type="number" class="form-control" name="age_min" value="{{ f.age_min }}" placeholder="min" min="17" max="45" step="1">
+        <span>to</span>
+        <input type="number" class="form-control" name="age_max" value="{{ f.age_max }}" placeholder="max" min="17" max="45" step="1">
+      </div>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label>Cap hit ($M)</label>
+      <div class="range-pair">
+        <input type="number" class="form-control" name="cap_min" value="{{ f.cap_min }}" placeholder="min" min="0" max="20" step="0.25">
+        <span>to</span>
+        <input type="number" class="form-control" name="cap_max" value="{{ f.cap_max }}" placeholder="max" min="0" max="20" step="0.25">
+      </div>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-1">
+      <label for="min_pts">Min pts</label>
+      <input type="number" class="form-control" id="min_pts" name="min_pts" value="{{ f.min_pts }}" placeholder="0" min="0" step="25">
+    </div>
+  </div>
+
+  <div class="form-row align-items-end">
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label for="sort">Sort by</label>
+      <select class="form-control" id="sort" name="sort">
+        {% for key, cfg in sorts.items() %}
+        <option value="{{ key }}" {% if sort_key == key %}selected{% endif %}>{{ cfg[2] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label for="dir">Order</label>
+      <select class="form-control" id="dir" name="dir">
+        <option value="asc"  {% if direction == 'asc'  %}selected{% endif %}>Low to high</option>
+        <option value="desc" {% if direction == 'desc' %}selected{% endif %}>High to low</option>
+      </select>
+    </div>
+    <div class="form-group col-6 col-md-4 col-lg-2">
+      <label for="limit">Show</label>
+      <select class="form-control" id="limit" name="limit">
+        <option value="100" {% if limit == '100' %}selected{% endif %}>Top 100</option>
+        <option value="300" {% if limit == '300' %}selected{% endif %}>Top 300</option>
+        <option value="1000" {% if limit == '1000' %}selected{% endif %}>Top 1000</option>
+        <option value="all" {% if limit == 'all' %}selected{% endif %}>Everyone</option>
+      </select>
+    </div>
+    <div class="form-group col-auto">
+      <button type="submit" class="btn btn-primary">Apply</button>
+    </div>
+    <div class="form-group col-auto">
+      <a href="{{ url_for('value') }}" class="chip">Clear</a>
+    </div>
+  </div>
+
+  <div class="settings-actions">
+    <span class="chip is-on">Median: ${{ '{:,}'.format(median_cpp) }} per point</span>
+    <span class="chip">{{ '{:,}'.format(matched) }} of {{ '{:,}'.format(total_priced) }} contracts match</span>
+    <span class="text-muted" style="font-size:.78rem;">
+      The median is taken across every priced contract, so the index means the
+      same thing however you filter.
+    </span>
+  </div>
+</form>
+
+{% if rows %}
+<div class="table-responsive table-scroll">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th class="t">{{ sort_link('name', 'Player') }}</th>
+        <th class="t">Team</th>
+        <th class="t">Pos</th>
+        <th>{{ sort_link('age', 'Age') }}</th>
+        <th>{{ sort_link('cap_hit', 'Cap hit') }}</th>
+        <th class="t">{{ sort_link('expiry', 'Term') }}</th>
+        <th>{{ sort_link('points', 'Proj. pts') }}</th>
+        <th>{{ sort_link('games', 'Proj. GP') }}</th>
+        <th>{{ sort_link('cost_per_point', '$ / point') }}</th>
+        <th>{{ sort_link('index', 'Value index') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="rank-cell">{{ loop.index }}</td>
+        <td class="t"><a href="{{ url_for('player_page', player=r.name) }}">{{ r.name }}</a></td>
+        <td class="t">{{ r.team }}</td>
+        <td class="t"><span class="badge-pos">{{ r.fw_def }}</span></td>
+        <td>{{ r.age | round(1) }}</td>
+        <td>${{ '{:,.0f}'.format(r.cap_hit) }}</td>
+        <td class="t">{{ r.contract if r.contract else '&mdash;' | safe }}</td>
+        <td>{{ r.PTSTOT | round(0) | int }}</td>
+        <td>{{ r.GP2 | round(0) | int }}</td>
+        <td>${{ '{:,.0f}'.format(r.cost_per_point) }}</td>
+        <td>
+          <div style="min-width:110px;">
+            <div class="bar-label {% if r.index >= 100 %}delta-pos{% else %}delta-neg{% endif %}">
+              {{ r.index | round(0) | int }}
+            </div>
+            <div class="meter {% if r.index >= 150 %}is-lead{% endif %}">
+              <span style="width: {{ [r.index, 200] | min / 2 }}%"></span>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-muted mt-3" style="font-size:.82rem;">
+  Cap hit comes from the roster data, so anyone without one listed is missing here.
+  Column headers are clickable.
+</p>
+{% else %}
+<div class="empty-state">
+  <p>Nothing matches those filters. Try widening the age or salary range.</p>
+</div>
+{% endif %}
+{% endblock %}

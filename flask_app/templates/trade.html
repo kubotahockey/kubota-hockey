@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block title %}Fantasy trade analyzer — Kubota Hockey{% endblock %}
+{% block meta_description %}Price a fantasy hockey trade against your own league settings, in points or categories.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Fantasy trade analyzer</h1>
+  <p class="lede">
+    Drop players on both sides and see what the deal is worth in your league. Set
+    your scoring first. A trade that looks great in a points league can be a
+    disaster in categories.
+  </p>
+</div>
+
+<form class="settings-panel" id="leagueForm">
+  <h5 class="panel-title">League settings</h5>
+
+  <div class="form-row">
+    <div class="form-group col-sm-6 col-lg-2">
+      <label for="league_type">League Type</label>
+      <select class="form-control" id="league_type" name="league_type">
+        <option value="points" selected>Points</option>
+        <option value="categories">Categories</option>
+      </select>
+    </div>
+    <div class="form-group col-sm-6 col-lg-2">
+      <label for="position_grouping">Position Grouping</label>
+      <select class="form-control" id="position_grouping" name="position_grouping">
+        <option value="split" selected>LW/C/RW/D</option>
+        <option value="fw_def">FW/DEF</option>
+      </select>
+    </div>
+    <div class="form-group col-sm-6 col-lg-2">
+      <label for="teams">Teams</label>
+      <input type="number" class="form-control" id="teams" name="teams" value="12" min="2">
+    </div>
+  </div>
+
+  <details class="setting-block" open>
+    <summary>Roster settings</summary>
+
+    <div id="roster-split" class="form-row">
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="lw_starters">LW Starters</label>
+        <input type="number" class="form-control" id="lw_starters" name="lw_starters" value="2" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="rw_starters">RW Starters</label>
+        <input type="number" class="form-control" id="rw_starters" name="rw_starters" value="2" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="c_starters">C Starters</label>
+        <input type="number" class="form-control" id="c_starters" name="c_starters" value="2" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="d_starters">D Starters</label>
+        <input type="number" class="form-control" id="d_starters" name="d_starters" value="4" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="util_starters">Utility Starters</label>
+        <input type="number" class="form-control" id="util_starters" name="util_starters" value="1" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="bench_split">Bench</label>
+        <input type="number" class="form-control" id="bench_split" name="bench_split" value="4" min="0">
+      </div>
+    </div>
+
+    <div id="roster-fwdef" class="form-row" hidden>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="fw_starters">FW Starters</label>
+        <input type="number" class="form-control" id="fw_starters" name="fw_starters" value="6" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="def_starters">DEF Starters</label>
+        <input type="number" class="form-control" id="def_starters" name="def_starters" value="4" min="0">
+      </div>
+      <div class="form-group col-6 col-md-4 col-lg-2">
+        <label for="bench_fwdef">Bench</label>
+        <input type="number" class="form-control" id="bench_fwdef" name="bench_fwdef" value="4" min="0">
+      </div>
+    </div>
+
+    <p class="text-muted setting-note">
+      Roster size sets where replacement level falls, which is what every value
+      on this page is measured against. A 10-team league and a 16-team league
+      will price the same trade differently. Every skater is run over 84 games.
+    </p>
+  </details>
+
+  <details class="setting-block" id="pointsSettings" open>
+    <summary>Scoring settings</summary>
+    <div class="form-row">
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="g_points">G (Goals)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="g_points" name="g_points" value="6">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="a_points">A (Assists)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="a_points" name="a_points" value="4">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="pts_points">PTS (G + A)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="pts_points" name="pts_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="sog_points">SOG (Shots)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="sog_points" name="sog_points" value="0.9">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="pim_points">PIM</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="pim_points" name="pim_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="plusminus_points">+/-</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="plusminus_points" name="plusminus_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="ppg_points">PPG</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="ppg_points" name="ppg_points" value="2">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="ppa_points">PPA</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="ppa_points" name="ppa_points" value="2">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="ppp_points">PPP</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="ppp_points" name="ppp_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="shg_points">SHG</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="shg_points" name="shg_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="sha_points">SHA</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="sha_points" name="sha_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="shp_points">SHP</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="shp_points" name="shp_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="blk_points">BLK (Blocks)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="blk_points" name="blk_points" value="0.5">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="hit_points">HIT (Hits)</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="hit_points" name="hit_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="fow_points">FOW</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="fow_points" name="fow_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="fol_points">FOL</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="fol_points" name="fol_points" value="0">
+      </div>
+      <div class="form-group col-6 col-md-3 col-lg-2">
+        <label for="defensive_points">D bonus on G+A</label>
+        <input type="number" step="0.1" class="form-control scoring-input" id="defensive_points" name="defensive_points" value="0">
+      </div>
+    </div>
+    <p class="text-muted setting-note">
+      Goals and assists are counted separately by default. If your league scores
+      points instead, set G and A to 0 and put your value in PTS. Same idea for
+      PPG/PPA against PPP, and SHG/SHA against SHP &mdash; use one or the other
+      or you will count it twice.
+    </p>
+  </details>
+
+  <details class="setting-block" id="catSettings" open hidden>
+    <summary>Categories counted</summary>
+    <div class="chip-row">
+      {% for key, label, col, higher in cats %}
+      <label class="chip cat-chip {% if key in default_cats %}is-on{% endif %}">
+        <input type="checkbox" name="categories" value="{{ key }}"
+               {% if key in default_cats %}checked{% endif %} hidden> {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <p class="text-muted setting-note">
+      Each category is z-scored across the league, so a side's value is how many
+      standard deviations it is worth above replacement.
+    </p>
+  </details>
+
+  <div class="settings-actions">
+    <button type="button" id="resetSettings" class="chip">Reset to defaults</button>
+    <span class="text-muted" style="font-size:.78rem;">
+      Same engine as the <a href="{{ url_for('currentyear') }}">projections page</a>.
+      Settings are saved in the page URL.
+    </span>
+  </div>
+</form>
+
+<div id="verdict" class="verdict" hidden>
+  <div class="verdict-bar"><span id="verdictFill"></span></div>
+  <div class="verdict-text">
+    <h2 id="verdictHead"></h2>
+    <p id="verdictDetail"></p>
+    <p id="verdictNote" class="verdict-note" hidden></p>
+  </div>
+</div>
+
+<div class="trade-grid">
+  <section class="trade-side" id="sideA">
+    <header>
+      <h3>Side A gets</h3>
+      <span class="side-score">
+        <span class="side-value" data-role="value">&mdash;</span>
+        <span class="side-value-label" data-role="valuelabel">value</span>
+      </span>
+    </header>
+    <div class="side-search">
+      <input type="text" class="form-control" data-role="search" autocomplete="off" placeholder="Add a player&hellip;">
+      <ul class="list-group" data-role="results"></ul>
+    </div>
+    <ul class="side-players" data-role="players"></ul>
+  </section>
+
+  <div class="trade-versus"><span>for</span></div>
+
+  <section class="trade-side" id="sideB">
+    <header>
+      <h3>Side B gets</h3>
+      <span class="side-score">
+        <span class="side-value" data-role="value">&mdash;</span>
+        <span class="side-value-label" data-role="valuelabel">value</span>
+      </span>
+    </header>
+    <div class="side-search">
+      <input type="text" class="form-control" data-role="search" autocomplete="off" placeholder="Add a player&hellip;">
+      <ul class="list-group" data-role="results"></ul>
+    </div>
+    <ul class="side-players" data-role="players"></ul>
+  </section>
+</div>
+
+<div id="catPanel" class="mt-4" hidden>
+  <div class="zone-line">
+    <h2>Category by category</h2>
+    <p class="zone-note">Full-season totals</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr><th class="t">Category</th><th class="num">Side A</th><th>Side B</th><th class="t">Edge</th></tr>
+      </thead>
+      <tbody id="catBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tradeEmpty" class="empty-state mt-4">
+  <p>Add at least one player to each side.</p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script id="allPlayers" type="application/json">{{ players | tojson }}</script>
+<script>
+(function () {
+  var ALL   = JSON.parse(document.getElementById('allPlayers').textContent);
+  var sides = { a: [], b: [] };
+  var els   = { a: document.getElementById('sideA'), b: document.getElementById('sideB') };
+
+  var form        = document.getElementById('leagueForm');
+  var leagueType  = document.getElementById('league_type');
+  var posGrouping = document.getElementById('position_grouping');
+  var pointsBox   = document.getElementById('pointsSettings');
+  var catBox      = document.getElementById('catSettings');
+  var rosterSplit = document.getElementById('roster-split');
+  var rosterFwDef = document.getElementById('roster-fwdef');
+  var verdict     = document.getElementById('verdict');
+  var verdictFill = document.getElementById('verdictFill');
+  var verdictHead = document.getElementById('verdictHead');
+  var verdictDet  = document.getElementById('verdictDetail');
+  var verdictNote = document.getElementById('verdictNote');
+  var catPanel    = document.getElementById('catPanel');
+  var catBody     = document.getElementById('catBody');
+  var empty       = document.getElementById('tradeEmpty');
+
+  function n1(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(1); }
+
+  function settingsParams() {
+    var p = new URLSearchParams();
+    new FormData(form).forEach(function (v, k) { p.append(k, v); });
+    return p;
+  }
+
+  function syncUrl(p) {
+    history.replaceState(null, '', '?' + p.toString());
+  }
+
+  function readUrl() {
+    var q = new URLSearchParams(location.search);
+    sides.a = q.getAll('a').filter(function (x) { return ALL.indexOf(x) !== -1; });
+    sides.b = q.getAll('b').filter(function (x) { return ALL.indexOf(x) !== -1; });
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.type === 'checkbox' || el.type === 'button') return;
+      if (q.has(el.name)) el.value = q.get(el.name);
+    });
+    if (q.has('categories')) {
+      var on = q.getAll('categories');
+      form.querySelectorAll('input[name="categories"]').forEach(function (cb) {
+        cb.checked = on.indexOf(cb.value) !== -1;
+        cb.closest('.cat-chip').classList.toggle('is-on', cb.checked);
+      });
+    }
+  }
+
+  // Category chips are checkboxes styled as pills
+  form.querySelectorAll('.cat-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      // the hidden checkbox toggles from the label click; sync the pill after
+      setTimeout(function () {
+        chip.classList.toggle('is-on', chip.querySelector('input').checked);
+        run();
+      }, 0);
+    });
+  });
+
+  function toggleFormat() {
+    var cats = leagueType.value === 'categories';
+    catBox.hidden = !cats;
+    pointsBox.hidden = cats;
+
+    var split = posGrouping.value === 'split';
+    rosterSplit.hidden = !split;
+    rosterFwDef.hidden = split;
+    // Disabled inputs stay out of FormData, so only the active roster shape
+    // is sent and the server never sees a conflicting pair.
+    rosterSplit.querySelectorAll('input').forEach(function (i) { i.disabled = !split; });
+    rosterFwDef.querySelectorAll('input').forEach(function (i) { i.disabled = split; });
+  }
+
+  function wireSearch(key) {
+    var root    = els[key];
+    var input   = root.querySelector('[data-role="search"]');
+    var results = root.querySelector('[data-role="results"]');
+    input.addEventListener('input', function () {
+      var q = this.value.toLowerCase().trim();
+      results.innerHTML = '';
+      if (!q) return;
+      var taken = sides.a.concat(sides.b);
+      ALL.filter(function (x) {
+        return x.toLowerCase().indexOf(q) !== -1 && taken.indexOf(x) === -1;
+      }).slice(0, 6).forEach(function (x) {
+        var li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.textContent = x;
+        li.addEventListener('click', function () {
+          if (sides[key].length >= 6) return;
+          sides[key].push(x);
+          input.value = ''; results.innerHTML = '';
+          run();
+        });
+        results.appendChild(li);
+      });
+    });
+    document.addEventListener('click', function (e) {
+      if (!results.contains(e.target) && e.target !== input) results.innerHTML = '';
+    });
+  }
+  wireSearch('a'); wireSearch('b');
+
+  function renderSide(key, data, isWinner, cats) {
+    var root    = els[key];
+    var list    = root.querySelector('[data-role="players"]');
+    var valueEl = root.querySelector('[data-role="value"]');
+    var labelEl = root.querySelector('[data-role="valuelabel"]');
+
+    root.classList.toggle('is-winner', !!isWinner);
+    valueEl.textContent = data.count ? n1(data.vorp) : '—';
+    labelEl.textContent = cats ? 'z-score over replacement' : 'value over replacement';
+
+    list.innerHTML = '';
+    data.players.forEach(function (p) {
+      var li = document.createElement('li');
+      li.className = 'side-player';
+      li.innerHTML =
+        '<img src="/static/images/logo_teams/' + p.image + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<span class="sp-who">' +
+          '<a href="/player?player=' + encodeURIComponent(p.name) + '">' + p.name + '</a>' +
+          '<span class="sp-sub">' + p.pos + ' · ' + p.team + ' · ' + n1(p.gp) + ' GP</span>' +
+        '</span>' +
+        '<span class="sp-num">' +
+          '<span class="sp-pts">' + n1(p.vorp) + '</span>' +
+          '<span class="sp-cap">' + n1(p.fp) + ' total</span>' +
+        '</span>' +
+        '<button class="drop" type="button" aria-label="Remove ' + p.name + '">&times;</button>';
+      li.querySelector('.drop').addEventListener('click', function () {
+        sides[key] = sides[key].filter(function (x) { return x !== p.name; });
+        run();
+      });
+      list.appendChild(li);
+    });
+  }
+
+  function renderCats(d) {
+    var show = d.league_type === 'categories' && d.a.count && d.b.count;
+    catPanel.hidden = !show;
+    if (!show) return;
+    catBody.innerHTML = '';
+    d.categories.forEach(function (c) {
+      var tr = document.createElement('tr');
+      var edge = c.edge === 'a' ? '<span class="delta-pos">Side A</span>'
+               : c.edge === 'b' ? '<span style="color:var(--crease)">Side B</span>'
+               : '<span class="text-muted">Even</span>';
+      tr.innerHTML = '<td class="t">' + c.label + (c.higher ? '' : ' <span class="sp-sub">(lower is better)</span>') + '</td>' +
+                     '<td class="num">' + n1(c.a) + '</td><td>' + n1(c.b) + '</td>' +
+                     '<td class="t">' + edge + '</td>';
+      catBody.appendChild(tr);
+    });
+  }
+
+  function renderVerdict(d) {
+    var ready = d.a.count && d.b.count;
+    verdict.hidden = !ready;
+    empty.hidden = !!ready;
+    if (!ready) return;
+
+    verdictHead.textContent = d.headline;
+    verdictDet.textContent  = d.detail;
+
+    var share = 50;
+    if (d.league_type === 'categories') {
+      var tot = d.cat_score.a + d.cat_score.b + d.cat_score.ties;
+      if (tot) share = (d.cat_score.a + d.cat_score.ties / 2) / tot * 100;
+    } else {
+      var sum = Math.abs(d.a.vorp) + Math.abs(d.b.vorp);
+      if (sum) share = Math.max(0, Math.min(100, d.a.vorp / sum * 100));
+    }
+    verdictFill.style.width = share + '%';
+
+    verdictNote.hidden = !d.note;
+    if (d.note) verdictNote.textContent = d.note;
+  }
+
+  function run() {
+    toggleFormat();
+    var p = settingsParams();
+    sides.a.forEach(function (x) { p.append('a', x); });
+    sides.b.forEach(function (x) { p.append('b', x); });
+    syncUrl(p);
+
+    fetch('/api/trade?' + p.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { verdict.hidden = true; return; }
+        var cats = d.league_type === 'categories';
+        renderSide('a', d.a, d.winner === 'a', cats);
+        renderSide('b', d.b, d.winner === 'b', cats);
+        renderVerdict(d);
+        renderCats(d);
+      })
+      .catch(function () { verdict.hidden = true; });
+  }
+
+  document.getElementById('resetSettings').addEventListener('click', function () {
+    form.reset();
+    form.querySelectorAll('.cat-chip').forEach(function (chip) {
+      chip.classList.toggle('is-on', chip.querySelector('input').checked);
+    });
+    run();
+  });
+
+  form.addEventListener('change', function (e) {
+    if (e.target.name === 'categories') return; // handled by the chip click
+    run();
+  });
+  form.addEventListener('submit', function (e) { e.preventDefault(); run(); });
+
+  var typeTimer;
+  form.addEventListener('input', function (e) {
+    if (e.target.type !== 'number') return;
+    clearTimeout(typeTimer);
+    typeTimer = setTimeout(run, 450);
+  });
+
+  readUrl();
+  toggleFormat();
+  run();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Compare players — Kubota Hockey{% endblock %}
+{% block meta_description %}Put up to four skaters side by side and read their seven-year projection curves on one axis.{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Compare players</h1>
+  <p class="lede">
+    Up to four skaters on one axis. Everything is NHL-equivalent, so a kid in the
+    SHL lines up against an NHL regular without any mental math.
+  </p>
+</div>
+
+<div class="filter-bar">
+  <div class="form-group" style="flex:1 1 320px;">
+    <label for="compareSearch">Add a player</label>
+    <input type="text" class="form-control" id="compareSearch" autocomplete="off"
+           placeholder="Start typing a name…">
+    <ul class="list-group mt-1" id="compareResults" style="position:absolute;z-index:20;max-width:420px;"></ul>
+  </div>
+  <div class="form-group">
+    <label>&nbsp;</label>
+    <div><button type="button" id="clearCompare" class="chip">Clear all</button></div>
+  </div>
+</div>
+
+<div id="compareCards" class="compare-grid"></div>
+
+<div id="compareEmpty" class="empty-state" hidden>
+  <p>Add a player above to get started.</p>
+</div>
+
+<div id="compareChartWrap" class="chart-panel" hidden>
+  <div class="hero-chart-head">
+    <strong>Points per game</strong>
+    <span>Two seasons of history, then seven projected</span>
+  </div>
+  <div style="position:relative;height:360px;"><canvas id="compareChart"></canvas></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script id="allPlayers" type="application/json">{{ players | tojson }}</script>
+<script id="initialPicked" type="application/json">{{ picked | tojson }}</script>
+<script>
+(function () {
+  var ALL = JSON.parse(document.getElementById('allPlayers').textContent);
+  var picked = JSON.parse(document.getElementById('initialPicked').textContent) || [];
+  var K = window.KUBOTA;
+
+  var search  = document.getElementById('compareSearch');
+  var results = document.getElementById('compareResults');
+  var cards   = document.getElementById('compareCards');
+  var empty   = document.getElementById('compareEmpty');
+  var wrap    = document.getElementById('compareChartWrap');
+  var chart   = null;
+
+  function money(n) { return n == null ? '—' : '$' + Number(n).toLocaleString(); }
+  function num(n, d) { return n == null ? '—' : Number(n).toFixed(d || 0); }
+
+  function syncUrl() {
+    var qs = picked.map(function (p) { return 'player=' + encodeURIComponent(p); }).join('&');
+    history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+  }
+
+  function render(players) {
+    cards.innerHTML = '';
+    players.forEach(function (p, i) {
+      var colour = K.series[i % K.series.length];
+      var el = document.createElement('div');
+      el.className = 'compare-card';
+      el.innerHTML =
+        '<span class="swatch" style="background:' + colour + '"></span>' +
+        '<button class="drop" type="button" aria-label="Remove ' + p.name + '">&times;</button>' +
+        '<h3>' + p.name + '</h3>' +
+        '<div class="meta">' + (p.pos || '') + ' &middot; ' + (p.team || '') +
+          (p.age ? ' &middot; age ' + p.age : '') + '</div>' +
+        '<dl>' +
+          '<dt>Games</dt><dd>' + num(p.gp) + '</dd>' +
+          '<dt>Goals</dt><dd>' + num(p.g) + '</dd>' +
+          '<dt>Assists</dt><dd>' + num(p.a) + '</dd>' +
+          '<dt>Points</dt><dd>' + num(p.pts) + '</dd>' +
+          '<dt>Points per game</dt><dd>' + num(p.pts_per, 2) + '</dd>' +
+          '<dt>Cap hit</dt><dd>' + money(p.cap_hit) + '</dd>' +
+        '</dl>';
+      el.querySelector('.drop').addEventListener('click', function () {
+        picked = picked.filter(function (n) { return n !== p.name; });
+        load();
+      });
+      cards.appendChild(el);
+    });
+
+    var labels = ['2 yrs ago', 'Last yr', 'Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5', 'Yr 6', 'Yr 7'];
+    var sets = players.map(function (p, i) {
+      var colour = K.series[i % K.series.length];
+      return {
+        label: p.name,
+        data: (p.history || []).concat(p.curve || []),
+        borderColor: colour, backgroundColor: colour,
+        borderWidth: 2.5, pointRadius: 3, tension: .35, fill: false,
+        segment: { borderDash: function (c) { return c.p0DataIndex < 1 ? [5, 4] : undefined; } }
+      };
+    });
+
+    if (chart) { chart.destroy(); chart = null; }
+    wrap.hidden = players.length === 0;
+    empty.hidden = players.length !== 0;
+    if (!players.length) return;
+
+    chart = new Chart(document.getElementById('compareChart').getContext('2d'), {
+      type: 'line',
+      data: { labels: labels, datasets: sets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Points per game', color: K.fog },
+               grid: { color: K.line }, border: { display: false } },
+          x: { grid: { display: false }, border: { color: K.line } }
+        },
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: function (t) {
+            return t.dataset.label + ': ' + (t.raw == null ? '—' : Number(t.raw).toFixed(2));
+          } } }
+        }
+      }
+    });
+  }
+
+  function load() {
+    syncUrl();
+    if (!picked.length) { render([]); return; }
+    var qs = picked.map(function (p) { return 'player=' + encodeURIComponent(p); }).join('&');
+    fetch('/api/compare?' + qs)
+      .then(function (r) { return r.json(); })
+      .then(function (d) { render(d.players || []); })
+      .catch(function () { render([]); });
+  }
+
+  search.addEventListener('input', function () {
+    var q = this.value.toLowerCase().trim();
+    results.innerHTML = '';
+    if (!q) return;
+    ALL.filter(function (n) {
+      return n.toLowerCase().indexOf(q) !== -1 && picked.indexOf(n) === -1;
+    }).slice(0, 6).forEach(function (n) {
+      var li = document.createElement('li');
+      li.className = 'list-group-item list-group-item-action';
+      li.textContent = n;
+      li.addEventListener('click', function () {
+        if (picked.length >= 4) { picked.shift(); }
+        picked.push(n);
+        search.value = '';
+        results.innerHTML = '';
+        load();
+      });
+      results.appendChild(li);
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!results.contains(e.target) && e.target !== search) results.innerHTML = '';
+  });
+
+  document.getElementById('clearCompare').addEventListener('click', function () {
+    picked = []; load();
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

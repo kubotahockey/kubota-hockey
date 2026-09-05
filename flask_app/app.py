@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, request, jsonify, send_file
+from werkzeug.datastructures import MultiDict
+from flask.json.provider import DefaultJSONProvider
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
@@ -8,8 +10,47 @@ import math
 from pathlib import Path
 import os
 
+KUBOTA_BUILD = "2026-09-05 nan-safe"
+
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.getenv("KUBOTA_SECRET_KEY", "dev-only-change-me")
+
+
+# -----------------------------------------------------------------------------
+# JSON safety
+# -----------------------------------------------------------------------------
+# Python writes float('nan') as a bare NaN token, which is valid Python but NOT
+# valid JSON -- the browser's JSON.parse throws on it and the whole response is
+# lost. Any missing number coming out of pandas (a player with no listed cap
+# hit, a rate with no games behind it) would take a page down with it, so every
+# non-finite value becomes null before it is serialised.
+def _json_safe(value):
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
+
+
+class SafeJSONProvider(DefaultJSONProvider):
+    def dumps(self, obj, **kwargs):
+        return super().dumps(_json_safe(obj), **kwargs)
+
+
+app.json = SafeJSONProvider(app)
+
+
+def _records(frame):
+    """DataFrame -> list of dicts with every missing value as None.
+
+    Done here rather than relying only on the JSON provider above, so the
+    payload is valid JSON regardless of which Flask version is installed.
+    setup.py allows Flask>=1.1.2, and the provider hook only exists in 2.2+.
+    """
+    clean = frame.replace([np.inf, -np.inf], np.nan)
+    return clean.astype(object).where(pd.notna(clean), None).to_dict(orient='records')
 
 # =============================================================================
 # DB CONFIG (cross-platform: works on Windows & Linux)
@@ -17,10 +58,39 @@ app.secret_key = 'your_secret_key'
 
 # Resolve DB path relative to this file so it works on both Windows and Linux
 BASE_DIR = Path(__file__).resolve().parent
-DB_PROD_PATH = str((BASE_DIR / "database" / "Kubota_Website_PROD.db").resolve())
+DB_DIR = BASE_DIR / "database"
 
 
-DB_PROD_PATH = os.getenv("KUBOTA_DB_PATH", DB_PROD_PATH)
+def _resolve_db_path() -> str:
+    """Find the projections DB.
+
+    Order: KUBOTA_DB_PATH env var -> the expected PROD file -> any non-empty
+    .db in database/. Raises with a readable message instead of failing later
+    with an opaque 'no such table' error.
+    """
+    override = os.getenv("KUBOTA_DB_PATH")
+    if override:
+        return str(Path(override).resolve())
+
+    preferred = DB_DIR / "Kubota_Website_PROD.db"
+    if preferred.exists() and preferred.stat().st_size > 0:
+        return str(preferred.resolve())
+
+    candidates = sorted(
+        (p for p in DB_DIR.glob("*.db") if p.stat().st_size > 0),
+        key=lambda p: p.stat().st_size,
+        reverse=True,
+    )
+    if candidates:
+        return str(candidates[0].resolve())
+
+    raise RuntimeError(
+        f"No usable SQLite database found in {DB_DIR}. Expected "
+        f"Kubota_Website_PROD.db, or set the KUBOTA_DB_PATH environment variable."
+    )
+
+
+DB_PROD_PATH = _resolve_db_path()
 
 engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
 
@@ -28,7 +98,6 @@ engine = create_engine(f"sqlite:///{DB_PROD_PATH}")
 TABLE_FINAL        = "FINAL_PROJECTIONS"
 TABLE_ROSTER_CLEAN = "1YR_FINAL_ROSTER_CLEAN"
 TABLE_COMPS_1YR    = "1YR_FINAL_COMPS"
-TABLE_COMPS_DRAFT  = "DRAFT_PROJECTIONS_COMPS"
 
 # Optional: quick sanity check so errors are clearer
 def _assert_table(conn_engine, table_name):
@@ -187,6 +256,14 @@ df_projections = pd.DataFrame({
 })
 df_projections["PIM"] = df_projections["PIM2"]
 
+# Contract data lives in the roster table but was never surfaced anywhere.
+_cap_raw = R.get("Cap Hit", pd.Series(index=R.index, dtype="object"))
+df_projections["cap_hit"] = pd.to_numeric(
+    _cap_raw.astype(str).str.replace(r"[^0-9.]", "", regex=True).replace("", np.nan),
+    errors="coerce",
+)
+df_projections["contract"] = R.get("CTRCT", pd.Series(index=R.index, dtype="object")).astype(str)
+
 # ---------- map 7 seasons from roster per-season columns ----------
 # ensure numeric for the gp_* and pts_pg_* columns we’ll use
 for k in range(3, 10):
@@ -245,21 +322,60 @@ for y, x in enumerate(range(3, 10), start=1):
     df_comps[f'TOTPT_Y{y}'] = df_comps.get(f'ptspg_{x}', 0)
     df_comps[f'GPY{y}']     = df_comps.get(f'gp_{x}', 0)
 
-# (Optional, handy for your table bars that use season 1 totals)
-# df_comps['GPproj'] = df_comps.get('gp_3', 0).fillna(0.0)
-# df_comps['Gproj']  = df_comps.get('gpg_3', 0).fillna(0.0)  * df_comps['GPproj']
-# df_comps['Aproj']  = df_comps.get('apg_3', 0).fillna(0.0)  * df_comps['GPproj']
-# df_comps['PIMproj']= df_comps.get('pimpg_3',0).fillna(0.0) * df_comps['GPproj']
+# Age at the comparable season. The comps table stores a date of birth and the
+# season the comparable is anchored to, but never an age -- so anything asking
+# for comp.age used to render "undefined".
+_dob = pd.to_datetime(df_comps.get('date_of_birth'), errors='coerce')
+_season = pd.to_numeric(df_comps.get('season_2'), errors='coerce')
+df_comps['age'] = (_season - _dob.dt.year).round(0)
+df_comps.loc[(df_comps['age'] < 15) | (df_comps['age'] > 50), 'age'] = np.nan
+
 # =============================================================================
 # ROUTES
 # =============================================================================
+def _featured_curve():
+    """Pick a recognisable young forward and return his curve plus his three
+    closest historical comparables. This is what the homepage leads with."""
+    pool = df_projections.copy()
+    pool['age'] = pd.to_numeric(pool['age'], errors='coerce')
+    pool['PTSTOT'] = pd.to_numeric(pool['PTSTOT'], errors='coerce')
+    young = pool[(pool['age'] >= 19) & (pool['age'] <= 25)].sort_values('PTSTOT', ascending=False)
+    row = (young if not young.empty else pool.sort_values('PTSTOT', ascending=False)).head(1)
+    if row.empty:
+        return None
+    r = row.iloc[0]
+
+    def series(src, prefix):
+        out = []
+        for y in range(1, 8):
+            v = pd.to_numeric(src.get(f'{prefix}{y}'), errors='coerce')
+            out.append(None if pd.isna(v) else round(float(v), 3))
+        return out
+
+    comps = df_comps[df_comps['anchor'] == r.get('link')].sort_values('SCORE', ascending=False).head(3)
+    return {
+        'name': r['name'],
+        'team': r.get('team', ''),
+        'age': None if pd.isna(r['age']) else round(float(r['age']), 1),
+        'curve': series(r, 'TOTPT_Y'),
+        'comps': [{'name': c['Comparables'],
+                   'score': round(float(c['SCORE']), 2) if pd.notna(c['SCORE']) else None,
+                   'curve': series(c, 'TOTPT_Y')}
+                  for _, c in comps.iterrows()],
+    }
+
+
 @app.route('/')
 def home():
     return render_template(
         'index.html',
-        meta_title = "Kubota Hockey - NHL Projections",
-        meta_description = "Premium Statistical Projection System"
-        )
+        meta_title="Kubota Hockey - NHL Projections",
+        meta_description="Premium Statistical Projection System",
+        featured=_featured_curve(),
+        n_players=int(df_projections['name'].nunique()),
+        n_comps=int(len(df_comps)),
+        n_teams=int(df_projections['team'].nunique()),
+    )
 
 @app.context_processor
 def inject_last_update():
@@ -286,72 +402,101 @@ def currentyear():
     ]
     df_selected = df_final_projections[cols].copy().round(2)
     data = df_selected.to_dict(orient='records')
-    return render_template('currentyear.html', data=data)
+    # Pre-render the table with default league settings so the page has content
+    # before the user touches the form.
+    initial_rows = build_fantasy_table(DEFAULT_SCORING)
+    if not isinstance(initial_rows, str):
+        initial_rows = ''
+    return render_template('currentyear.html', data=data, initial_rows=initial_rows)
+
+
+DEFAULT_SCORING = MultiDict([
+    ('league_type', 'points'), ('position_grouping', 'split'),
+    ('teams', '12'),
+    ('lw_starters', '2'), ('rw_starters', '2'), ('c_starters', '2'),
+    ('d_starters', '4'), ('util_starters', '1'), ('bench_split', '4'),
+    ('g_points', '6'), ('a_points', '4'), ('pts_points', '0'),
+    ('sog_points', '0.9'), ('pim_points', '0'), ('plusminus_points', '0'),
+    ('ppg_points', '2'), ('ppa_points', '2'), ('ppp_points', '0'),
+    ('shg_points', '0'), ('sha_points', '0'), ('shp_points', '0'),
+    ('blk_points', '0.5'), ('hit_points', '0'), ('fol_points', '0'),
+    ('fow_points', '0'), ('defensive_points', '0'),
+])
 
 
 @app.route('/calculate_fantasy_points', methods=['POST'])
 def calculate_fantasy_points():
-    try:
+    return build_fantasy_table(request.form)
+
+
+def compute_fantasy_frame(form):
+    """Score every skater under `form`'s league settings.
+
+    Returns the full projections frame with FantasyPoints, PosGroup and VORP
+    added, sorted by VORP. Shared by the projections table and the trade
+    analyzer so both price players the same way.
+    """
+    if True:
         # --- Inputs ---
-        league_type = (request.form.get('league_type') or 'points').strip().lower()
-        position_grouping = (request.form.get('position_grouping') or 'split').strip().lower()  # 'split' or 'fw_def'
-        teams = int(request.form.get('teams', 12))
-        util_starters = int(request.form.get('util_starters', 0))
+        league_type = (form.get('league_type') or 'points').strip().lower()
+        position_grouping = (form.get('position_grouping') or 'split').strip().lower()  # 'split' or 'fw_def'
+        teams = int(form.get('teams', 12))
+        util_starters = int(form.get('util_starters', 0))
         util_total = teams * max(util_starters, 0)
 
         # Roster slots (starters only)
         if position_grouping == 'split':
-            slots_LW = int(request.form.get('lw_starters', 2))
-            slots_RW = int(request.form.get('rw_starters', 2))
-            slots_C  = int(request.form.get('c_starters', 2))
-            slots_D  = int(request.form.get('d_starters', 4))
+            slots_LW = int(form.get('lw_starters', 2))
+            slots_RW = int(form.get('rw_starters', 2))
+            slots_C  = int(form.get('c_starters', 2))
+            slots_D  = int(form.get('d_starters', 4))
             roster_counts = {
                 'LW': teams * max(slots_LW, 0),
                 'RW': teams * max(slots_RW, 0),
                 'C' : teams * max(slots_C,  0),
                 'D' : teams * max(slots_D,  0),
             }
-            bench_total = teams * max(int(request.form.get('bench_split', 0)), 0)
+            bench_total = teams * max(int(form.get('bench_split', 0)), 0)
         else:  # 'fw_def'
-            slots_F  = int(request.form.get('fw_starters', 6))
-            slots_D  = int(request.form.get('def_starters', 4))
+            slots_F  = int(form.get('fw_starters', 6))
+            slots_D  = int(form.get('def_starters', 4))
             roster_counts = {
                 'F': teams * max(slots_F, 0),
                 'D': teams * max(slots_D, 0),
             }
-            bench_total = teams * max(int(request.form.get('bench_fwdef', 0)), 0)
+            bench_total = teams * max(int(form.get('bench_fwdef', 0)), 0)
 
         # DAILY-LINEUP streaming factor (0..1). 0.6 ≈ typical nightly streaming.
-        bench_weight = float(request.form.get('bench_weight', 0.6))
+        bench_weight = float(form.get('bench_weight', 0.6))
         stream_total = int(math.floor(bench_total * max(min(bench_weight, 1.0), 0.0)))
 
         # Scoring weights (Points league). PTS added.
         scoring_settings = {
-            'G': float(request.form.get('g_points', 6)),
-            'A': float(request.form.get('a_points', 4)),
-            'PTS': float(request.form.get('pts_points', 0)),  # NEW
-            'SOG': float(request.form.get('sog_points', 0.9)),
-            'PIM': float(request.form.get('pim_points', 0)),
-            'PLUSMINUS': float(request.form.get('plusminus_points', 2)),
-            'PPG': float(request.form.get('ppg_points', 2)),
-            'PPA': float(request.form.get('ppa_points', 2)),
-            'PPP': float(request.form.get('ppp_points', 0)),  # keep 0 in points leagues to avoid double counting PP
-            'SHG': float(request.form.get('shg_points', 0)),
-            'SHA': float(request.form.get('sha_points', 0)),
-            'SHP': float(request.form.get('shp_points', 0)),
-            'BLK': float(request.form.get('blk_points', 0.5)),
-            'HIT': float(request.form.get('hit_points', 0)),
-            'FOL': float(request.form.get('fol_points', 0)),
-            'FOW': float(request.form.get('fow_points', 0)),
+            'G': float(form.get('g_points', 6)),
+            'A': float(form.get('a_points', 4)),
+            'PTS': float(form.get('pts_points', 0)),  # NEW
+            'SOG': float(form.get('sog_points', 0.9)),
+            'PIM': float(form.get('pim_points', 0)),
+            'PLUSMINUS': float(form.get('plusminus_points', 2)),
+            'PPG': float(form.get('ppg_points', 2)),
+            'PPA': float(form.get('ppa_points', 2)),
+            'PPP': float(form.get('ppp_points', 0)),  # keep 0 in points leagues to avoid double counting PP
+            'SHG': float(form.get('shg_points', 0)),
+            'SHA': float(form.get('sha_points', 0)),
+            'SHP': float(form.get('shp_points', 0)),
+            'BLK': float(form.get('blk_points', 0.5)),
+            'HIT': float(form.get('hit_points', 0)),
+            'FOL': float(form.get('fol_points', 0)),
+            'FOW': float(form.get('fow_points', 0)),
         }
-        defensive_points_multiplier = float(request.form.get('defensive_points', 0))
+        defensive_points_multiplier = float(form.get('defensive_points', 0))
 
         # --- Data ---
         df_selected = df_final_projections.copy()
 
-        # Season length
-        season_length = request.form.get('season_length')
-        df_selected['GP'] = 84 if season_length == '84' else df_selected['GPNEW']
+        # Everyone is projected over a full 84-game season, so players are
+        # compared on production rather than on availability.
+        df_selected['GP'] = 84.0
 
         # Convenience totals
         df_selected['PPP'] = df_selected['PPG'] + df_selected['PPA']
@@ -399,7 +544,7 @@ def calculate_fantasy_points():
         else:
             # CATEGORIES: checkboxes named "categories" control inclusion (Z-score)
             # Values must match keys we derive below (G, A, PTS, SOG, PIM, PLUSMINUS, PPG, PPA, PPP, SHG, SHA, SHP, BLK, HIT, FOL, FOW)
-            included_cats = set(request.form.getlist('categories'))
+            included_cats = set(form.getlist('categories'))
 
             cat_cols = [
                 'G_GP','A_GP','PTS_GP',  # include PTS
@@ -486,42 +631,49 @@ def calculate_fantasy_points():
         # Sort by VORP
         df_selected = df_selected.sort_values(by='VORP', ascending=False)
 
-        # --- Build rows (with data-key for sorting) ---
-        rows = []
-        rank = 0
-        for _, row in df_selected.iterrows():
-            rank += 1
-            rows.append(
-                '<tr>'
-                f'<td>{rank}</td>'
-                f'<td data-key="name">{row["name"]}</td>'
-                f'<td data-key="team">{row["team"]}</td>'
-                f'<td data-key="Pos">{row["Pos"]}</td>'
-                f'<td data-key="GP">{round(row["GP"], 2)}</td>'
-                f'<td data-key="G_GP">{round(row["G_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="A_GP">{round(row["A_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PTS_GP">{round((row["G_GP"] + row["A_GP"]) * row["GP"], 2)}</td>'
-                f'<td data-key="SOG_GP">{round(row["SOG_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PIM_GP">{round(row["PIM_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PLUSMINUS_GP">{round(row["PLUSMINUS_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="PPG">{round(row["PPG"] * row["GP"], 2)}</td>'
-                f'<td data-key="PPA">{round(row["PPA"] * row["GP"], 2)}</td>'
-                f'<td data-key="PPP">{round((row["PPG"] + row["PPA"]) * row["GP"], 2)}</td>'
-                f'<td data-key="SHG">{round(row["SHG"] * row["GP"], 2)}</td>'
-                f'<td data-key="SHA">{round(row["SHA"] * row["GP"], 2)}</td>'
-                f'<td data-key="SHP">{round((row["SHG"] + row["SHA"]) * row["GP"], 2)}</td>'
-                f'<td data-key="BLK_GP">{round(row["BLK_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="HIT_GP">{round(row["HIT_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="FOL_GP">{round(row["FOL_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="FOW_GP">{round(row["FOW_GP"] * row["GP"], 2)}</td>'
-                f'<td data-key="FantasyPoints">{round(row["FantasyPoints"], 2)}</td>'
-                f'<td data-key="VORP">{round(row["VORP"], 2)}</td>'
-                '</tr>'
-            )
-        return ''.join(rows)
+        return df_selected
 
+
+def build_fantasy_table(form):
+    """Render the projections table body. Wraps the scoring engine so the
+    /currentyear page and its AJAX endpoint share one code path."""
+    try:
+        df_selected = compute_fantasy_frame(form)
     except Exception as e:
         return f"An error occurred during the calculation: {str(e)}", 500
+
+    rows = []
+    rank = 0
+    for _, row in df_selected.iterrows():
+        rank += 1
+        rows.append(
+            '<tr>'
+            f'<td class="rank-cell">{rank}</td>'
+            f'<td class="t" data-key="name">{row["name"]}</td>'
+            f'<td class="t" data-key="team">{row["team"]}</td>'
+            f'<td class="t" data-key="Pos"><span class="badge-pos">{row["Pos"]}</span></td>'
+            f'<td data-key="GP">{round(row["GP"], 2)}</td>'
+            f'<td data-key="G_GP">{round(row["G_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="A_GP">{round(row["A_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="PTS_GP">{round((row["G_GP"] + row["A_GP"]) * row["GP"], 2)}</td>'
+            f'<td data-key="SOG_GP">{round(row["SOG_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="PIM_GP">{round(row["PIM_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="PLUSMINUS_GP">{round(row["PLUSMINUS_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="PPG">{round(row["PPG"] * row["GP"], 2)}</td>'
+            f'<td data-key="PPA">{round(row["PPA"] * row["GP"], 2)}</td>'
+            f'<td data-key="PPP">{round((row["PPG"] + row["PPA"]) * row["GP"], 2)}</td>'
+            f'<td data-key="SHG">{round(row["SHG"] * row["GP"], 2)}</td>'
+            f'<td data-key="SHA">{round(row["SHA"] * row["GP"], 2)}</td>'
+            f'<td data-key="SHP">{round((row["SHG"] + row["SHA"]) * row["GP"], 2)}</td>'
+            f'<td data-key="BLK_GP">{round(row["BLK_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="HIT_GP">{round(row["HIT_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="FOL_GP">{round(row["FOL_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="FOW_GP">{round(row["FOW_GP"] * row["GP"], 2)}</td>'
+            f'<td data-key="FantasyPoints">{round(row["FantasyPoints"], 2)}</td>'
+            f'<td data-key="VORP">{round(row["VORP"], 2)}</td>'
+            '</tr>'
+        )
+    return ''.join(rows)
 
 
 @app.route('/export_csv', methods=['POST'])
@@ -560,20 +712,35 @@ def player_page():
 
 @app.route('/get_player_data', methods=['POST'])
 def get_player_data():
-    player_name = request.form['player_name']
+    """Everything the player dashboard needs, as JSON.
+
+    Wrapped so that an unexpected failure still returns JSON. Flask's default
+    500 is an HTML page, which the browser cannot parse, so the page would show
+    a generic "failed to load" with nothing useful behind it.
+    """
+    try:
+        return _player_payload((request.form.get('player_name') or '').strip())
+    except Exception as exc:
+        app.logger.exception('get_player_data failed')
+        return jsonify({'error': f'{type(exc).__name__}: {exc}'}), 500
+
+
+def _player_payload(player_name):
+    if not player_name:
+        return jsonify({'error': 'No player name was sent.'}), 400
 
     # Use df_projections (roster-driven)
     rows = df_projections[df_projections['name'] == player_name]
     if rows.empty:
-        return jsonify({'error': 'No data found for this player.'}), 404
+        return jsonify({'error': f'No projection on file for "{player_name}".'}), 404
 
-    projection_data = rows.to_dict(orient='records')
+    projection_data = _records(rows)
 
     # Anchor/link for comps + image comes from df_projections['link']
     anchor = rows['link'].iloc[0] if 'link' in rows.columns else ""
 
     # Comps joined on anchor (target_player in DB)
-    comps_data = df_comps[df_comps['anchor'] == anchor].fillna(0).to_dict(orient='records')
+    comps_data = _records(df_comps[df_comps['anchor'] == anchor].fillna(0))
 
     # Image via df_logos (built from df_projections)
     try:
@@ -581,34 +748,203 @@ def get_player_data():
     except Exception:
         image_link = ''
 
+    # Percentile rank within the same position group. The player page has always
+    # charted these but nothing ever supplied them, so they rendered as NaN%.
+    group = df_projections[df_projections['fw_def'] == rows['fw_def'].iloc[0]]
+    for key, col in (('GPPercentile', 'GP2'), ('GPercentile', 'GTOT'),
+                     ('APercentile', 'ATOT'), ('PTSPercentile', 'PTSTOT')):
+        series = pd.to_numeric(group[col], errors='coerce')
+        mine = pd.to_numeric(rows[col].iloc[0], errors='coerce')
+        if pd.isna(mine) or series.notna().sum() == 0:
+            projection_data[0][key] = 0.0
+        else:
+            projection_data[0][key] = round(float((series < mine).mean()), 4)
+
     return jsonify({'projection': projection_data, 'comps': comps_data, 'image_link': image_link})
 
-@app.route('/player_comps')
-def player_comps():
-    return render_template('player_comps.html')
+# -----------------------------------------------------------------------------
+# FANTASY TRADE ANALYZER
+# -----------------------------------------------------------------------------
+# key, label, column expression, higher-is-better.
+# This mirrors the category checkboxes on /currentyear exactly, so a league set
+# up on one page scores the same on the other.
+FANTASY_CATS = [
+    ('G',         'Goals',          'G_GP',         True),
+    ('A',         'Assists',        'A_GP',         True),
+    ('PTS',       'Points',         'PTS_GP',       True),
+    ('SOG',       'Shots',          'SOG_GP',       True),
+    ('PPG',       'PP goals',       'PPG',          True),
+    ('PPA',       'PP assists',     'PPA',          True),
+    ('PPP',       'PP points',      'PPP',          True),
+    ('SHG',       'SH goals',       'SHG',          True),
+    ('SHA',       'SH assists',     'SHA',          True),
+    ('SHP',       'SH points',      'SHP',          True),
+    ('BLK',       'Blocks',         'BLK_GP',       True),
+    ('HIT',       'Hits',           'HIT_GP',       True),
+    ('PIM',       'PIM',            'PIM_GP',       True),
+    ('PLUSMINUS', 'Plus/minus',     'PLUSMINUS_GP', True),
+    ('FOW',       'Faceoff wins',   'FOW_GP',       True),
+    ('FOL',       'Faceoff losses', 'FOL_GP',       False),
+]
 
-@app.route('/api/player_comps', methods=['GET'])
-def api_player_comps():
-    draw = int(request.args.get('draw', 1))
-    start = int(request.args.get('start', 0))
-    length = int(request.args.get('length', 15))
-    search_value = request.args.get('search[value]', '')
+DEFAULT_CATS = ['G', 'A', 'PTS', 'SOG', 'PPP', 'BLK', 'HIT', 'PLUSMINUS']
 
-    merged_df = df_comps.merge(df_final_projections[['Link','name']], left_on='anchor', right_on='Link', how='left')
-    if search_value:
-        merged_df = merged_df[merged_df['Comparables'].str.contains(search_value, case=False, na=False)]
-    merged_df = merged_df.sort_values(by='SCORE', ascending=False)
-    merged_df['SCORE'] = pd.to_numeric(merged_df['SCORE'], errors='coerce').fillna(0).round(0)
 
-    total_records = len(merged_df)
-    filtered_comps = merged_df.iloc[start:start + length].to_dict(orient='records')
+def _league_form(args):
+    """Merge the query string over the default league settings, so the trade
+    analyzer can be called with only the settings the manager changed."""
+    form = MultiDict(DEFAULT_SCORING)
+    for key in args.keys():
+        if key in ('a', 'b'):
+            continue
+        values = args.getlist(key)
+        form.setlist(key, values)
+    if 'categories' not in args and (args.get('league_type') or '') == 'categories':
+        form.setlist('categories', DEFAULT_CATS)
+    return form
+
+
+@app.route('/trade')
+def trade():
+    players = sorted(df_final_projections['name'].dropna().unique().tolist())
+    return render_template('trade.html', players=players,
+                           cats=FANTASY_CATS, default_cats=DEFAULT_CATS)
+
+
+@app.route('/api/trade')
+def api_trade():
+    args = request.args
+    league_type = (args.get('league_type') or 'points').strip().lower()
+    form = _league_form(args)
+
+    try:
+        frame = compute_fantasy_frame(form)
+    except Exception as exc:
+        return jsonify({'error': f'Could not score that league setup: {exc}'}), 400
+
+    frame = frame.set_index('name', drop=False)
+    included = set(form.getlist('categories')) or set(DEFAULT_CATS)
+
+    def pick(names):
+        out = []
+        for n in names:
+            if n in frame.index:
+                row = frame.loc[n]
+                if isinstance(row, pd.DataFrame):
+                    row = row.iloc[0]
+                out.append(row)
+        return out
+
+    def side(rows):
+        players, totals = [], {k: 0.0 for k, _, _, _ in FANTASY_CATS}
+        for r in rows:
+            gp = float(r['GP'])
+            stats = {}
+            for key, _, col, _ in FANTASY_CATS:
+                per_game = pd.to_numeric(r.get(col), errors='coerce')
+                per_game = 0.0 if pd.isna(per_game) else float(per_game)
+                # PPP/SHP are stored as per-game rates alongside the _GP columns
+                value = per_game * gp
+                stats[key] = round(value, 1)
+                totals[key] += value
+            players.append({
+                'name': r['name'],
+                'team': r.get('team', ''),
+                'pos': str(r.get('Pos', '')),
+                'image': r.get('Image') or 'default_logo.png',
+                'gp': round(gp, 1),
+                'fp': round(float(r['FantasyPoints']), 1),
+                'vorp': round(float(r['VORP']), 1),
+                'stats': stats,
+            })
+        players.sort(key=lambda p: p['vorp'], reverse=True)
+        return {
+            'players': players,
+            'count': len(players),
+            'fp': round(sum(p['fp'] for p in players), 1),
+            'vorp': round(sum(p['vorp'] for p in players), 1),
+            'best_vorp': round(max([p['vorp'] for p in players], default=0.0), 1),
+            'totals': {k: round(v, 1) for k, v in totals.items()},
+        }
+
+    a = side(pick(args.getlist('a')[:6]))
+    b = side(pick(args.getlist('b')[:6]))
+
+    # Category leagues are won category by category, so score them that way.
+    cat_rows, a_wins, b_wins, ties = [], 0, 0, 0
+    if league_type == 'categories':
+        for key, label, _, higher in FANTASY_CATS:
+            if key not in included:
+                continue
+            av, bv = a['totals'][key], b['totals'][key]
+            if abs(av - bv) < 0.05:
+                edge = None; ties += 1
+            elif (av > bv) == higher:
+                edge = 'a'; a_wins += 1
+            else:
+                edge = 'b'; b_wins += 1
+            cat_rows.append({'key': key, 'label': label, 'a': av, 'b': bv,
+                             'edge': edge, 'higher': higher})
+
+    # Roster spots: whoever sends more bodies frees a spot, and that spot gets
+    # filled off waivers at roughly replacement level (VORP 0).
+    spare = a['count'] - b['count']
+
+    if not a['count'] or not b['count']:
+        winner = None
+        headline = 'Add players to both sides'
+        detail = 'Put at least one player on each side.'
+    elif league_type == 'categories':
+        winner = 'a' if a_wins > b_wins else ('b' if b_wins > a_wins else None)
+        margin = abs(a_wins - b_wins)
+        if winner is None:
+            headline = f'Splits the categories {a_wins}-{b_wins}'
+            detail = 'Nobody gains ground. Which categories you are already winning or already out of matters more here than the split.'
+        else:
+            headline = f'Side {winner.upper()} takes {max(a_wins, b_wins)} of {len(cat_rows)} categories'
+            detail = ('One category in it. Look at which ones, not the count.'
+                      if margin <= 1 else
+                      'A comfortable win on count. Check that the categories you gain are ones you are actually close in.')
+    else:
+        gap = abs(a['vorp'] - b['vorp'])
+        winner = 'a' if a['vorp'] > b['vorp'] else ('b' if b['vorp'] > a['vorp'] else None)
+        # Judge the gap against the size of the deal. Sixty points between two
+        # stars is noise; sixty points between two depth guys is a fleecing.
+        scale = max(abs(a['vorp']), abs(b['vorp']), 1.0)
+        pct = gap / scale * 100
+        if pct < 8:
+            headline = 'Close to even'
+            detail = 'Too close to call on value. Decide it on what your roster needs.'
+        elif pct < 20:
+            headline = f'Side {winner.upper()} by {round(gap)} points of value'
+            detail = 'A real but modest edge. Worth a point or two a week over the season.'
+        else:
+            headline = f'Side {winner.upper()} by {round(gap)} points of value'
+            detail = 'That is a big gap. If you are on the wrong end of it, you had better be fixing a hole somewhere.'
+
+    note = None
+    if a['count'] and b['count'] and spare:
+        # a['count'] is what Side A *receives*. Getting back fewer bodies means
+        # sending more, which frees a roster spot for that manager.
+        frees = 'A' if spare < 0 else 'B'
+        n = abs(spare)
+        spot = 'a roster spot' if n == 1 else f'{n} roster spots'
+        note = (f'Side {frees} sends more bodies than it gets back and opens up {spot}. '
+                f'Those get filled off waivers, and waiver guys are worth about zero here, '
+                f'so quantity does not do much for you. The best player usually decides '
+                f'these deals.')
 
     return jsonify({
-        'draw': draw,
-        'recordsTotal': total_records,
-        'recordsFiltered': total_records,
-        'data': filtered_comps
+        'a': a, 'b': b,
+        'league_type': league_type,
+        'categories': cat_rows,
+        'cat_score': {'a': a_wins, 'b': b_wins, 'ties': ties},
+        'winner': winner,
+        'headline': headline,
+        'detail': detail,
+        'note': note,
     })
+
 
 @app.route('/teams')
 def teams_overview():
@@ -639,6 +975,20 @@ def teams_overview():
     if not selected_team or selected_team not in teams_available:
         selected_team = teams_available[0]
 
+    # Build the per-year rate columns BEFORE slicing to a single team, otherwise
+    # the slice is taken from a frame that does not yet have PT_Y1..PT_Y7.
+    for y in range(1, 8):
+        # If any season fields are missing (unlikely now), fall back to current-season per-game/GP
+        if f'TOTPT_Y{y}' not in dfm.columns:
+            dfm[f'TOTPT_Y{y}'] = (dfm['PTSTOT'] / dfm['GP2']).replace([np.inf, -np.inf], 0).fillna(0)
+        if f'GPY{y}' not in dfm.columns:
+            dfm[f'GPY{y}'] = dfm['GP2'].fillna(0)
+
+        # PT_Y* is already a per-game rate because TOTPT_Y* = pts_pg_*
+        dfm[f'PT_Y{y}'] = dfm[f'TOTPT_Y{y}']
+
+    year_cols = [f'PT_Y{y}' for y in range(1, 8)]
+
     team_players = dfm[dfm['Team'] == selected_team]
     team_logo = team_players['Image'].values[0] if not team_players.empty and pd.notna(team_players['Image'].values[0]) else 'default_logo.png'
 
@@ -647,29 +997,58 @@ def teams_overview():
     leaderboard = leaderboard.sort_values(by='PTSTOT', ascending=False).round(2) if not team_players.empty else pd.DataFrame()
     leaderboard_data = leaderboard.to_dict(orient='records')
 
-    for y in range(1, 8):
-        # If any season fields are missing (unlikely now), fall back to current-season per-game/GP
-        if f'TOTPT_Y{y}' not in dfm.columns:
-            dfm[f'TOTPT_Y{y}'] = (dfm['PTSTOT'] / dfm['GP2']).replace([np.inf, -np.inf], 0).fillna(0)
-        if f'GPY{y}' not in dfm.columns:
-            dfm[f'GPY{y}'] = dfm['GP2'].fillna(0)
-    
-        # PT_Y* is already a per-game rate because TOTPT_Y* = pts_pg_*
-        dfm[f'PT_Y{y}'] = dfm[f'TOTPT_Y{y}']
+    pts_projections = team_players[year_cols].mean().round(3).tolist() if not team_players.empty else []
 
-    pts_projections = team_players[[f'PT_Y{y}' for y in range(1, 8)]].mean().tolist() if not team_players.empty else []
+    # League-wide comparison. Each of these must be a 7-value series so it can be
+    # plotted against Year 1..7 -- previously these were dicts of {team: scalar},
+    # which drew three meaningless points on a seven-point axis.
+    league_pts_projections = dfm.groupby('Team')[year_cols].mean()
+    team_means = league_pts_projections.mean(axis=1)
 
-    # League-wide comparison
-    league_pts_projections = dfm.groupby('Team')[[f'PT_Y{y}' for y in range(1, 8)]].mean()
-    top_team_projections = league_pts_projections.mean(axis=1).nlargest(3).round(2).to_dict()
-    lowest_team_projections = league_pts_projections.mean(axis=1).nsmallest(3).round(2).to_dict()
-    league_average_projections = league_pts_projections.mean(axis=0).round(2).tolist()
+    top_team_name = team_means.idxmax() if not team_means.empty else selected_team
+    lowest_team_name = team_means.idxmin() if not team_means.empty else selected_team
+
+    top_team_projections = league_pts_projections.loc[top_team_name].round(3).tolist()
+    lowest_team_projections = league_pts_projections.loc[lowest_team_name].round(3).tolist()
+    league_average_projections = league_pts_projections.mean(axis=0).round(3).tolist()
 
     # Team rankings by points/GP
     team_rankings = dfm.groupby('Team').agg({'PTSTOT':'sum','GP2':'sum','Image':'first'}).reset_index()
     team_rankings['PTSPERG'] = team_rankings['PTSTOT'] / team_rankings['GP2']
     team_rankings = team_rankings.sort_values(by='PTSPERG', ascending=False).round(3)
     team_rank = int(team_rankings.reset_index(drop=True).index[team_rankings['Team'] == selected_team][0]) + 1
+
+    # --- Positional ranks -------------------------------------------------
+    # The team page charts seven ranks. They used to be hardcoded to 0, which
+    # drew every bar at full length. These compute them for real.
+    def _rank_of(frame, team, top_n=None):
+        """Rank every team by PTS/GP within `frame`, return (rank, pts_gp)."""
+        if frame.empty:
+            return 0, 0.0
+        f = frame
+        if top_n is not None:
+            f = (f.sort_values('PTSTOT', ascending=False)
+                   .groupby('Team', group_keys=False)
+                   .head(top_n))
+        agg = f.groupby('Team').agg({'PTSTOT': 'sum', 'GP2': 'sum'})
+        agg = agg[agg['GP2'] > 0]
+        if agg.empty or team not in agg.index:
+            return 0, 0.0
+        agg['PTSPERG'] = agg['PTSTOT'] / agg['GP2']
+        order = agg['PTSPERG'].rank(ascending=False, method='min')
+        return int(order.loc[team]), round(float(agg['PTSPERG'].loc[team]), 3)
+
+    fw_frame = dfm[dfm['fw_def'] == 'FW']
+    def_frame = dfm[dfm['fw_def'] == 'DEF']
+    ages = pd.to_numeric(dfm.get('age'), errors='coerce')
+    u23 = dfm[ages < 23]
+
+    fw_rank, fw_pts_gp = _rank_of(fw_frame, selected_team)
+    def_rank, def_pts_gp = _rank_of(def_frame, selected_team)
+    top_12_fw_rank, top_12_fw_pts_gp = _rank_of(fw_frame, selected_team, top_n=12)
+    top_6_def_rank, top_6_def_pts_gp = _rank_of(def_frame, selected_team, top_n=6)
+    fw_rank_under_23, _ = _rank_of(u23[u23['fw_def'] == 'FW'], selected_team)
+    def_rank_under_23, _ = _rank_of(u23[u23['fw_def'] == 'DEF'], selected_team)
 
     return render_template('teams_overview.html',
                            team_name=selected_team,
@@ -680,14 +1059,285 @@ def teams_overview():
                            top_team_projections=top_team_projections,
                            lowest_team_projections=lowest_team_projections,
                            league_average_projections=league_average_projections,
+                           top_team_name=top_team_name,
+                           lowest_team_name=lowest_team_name,
+                           teams_available=sorted(teams_available),
                            fw_stats={}, def_stats={}, top_12_forwards={}, top_6_defensemen={},
-                           total_team_pts_gp=team_stats.get('PTSTOT',0)/team_stats.get('GP2',1) if team_stats else 0,
-                           fw_pts_gp=0, def_pts_gp=0,
-                           top_12_fw_pts_gp=0, top_6_def_pts_gp=0,
+                           total_team_pts_gp=round(team_stats.get('PTSTOT',0)/team_stats.get('GP2',1), 3) if team_stats.get('GP2') else 0,
+                           fw_pts_gp=fw_pts_gp, def_pts_gp=def_pts_gp,
+                           top_12_fw_pts_gp=top_12_fw_pts_gp, top_6_def_pts_gp=top_6_def_pts_gp,
                            total_team_rank=team_rank,
-                           fw_rank=0, def_rank=0,
-                           top_12_fw_rank=0, top_6_def_rank=0,
-                           fw_rank_under_23=0, def_rank_under_23=0)
+                           fw_rank=fw_rank, def_rank=def_rank,
+                           top_12_fw_rank=top_12_fw_rank, top_6_def_rank=top_6_def_rank,
+                           fw_rank_under_23=fw_rank_under_23, def_rank_under_23=def_rank_under_23)
+
+# =============================================================================
+# NEW PAGES
+# =============================================================================
+
+# Categories surfaced on the leaders board: (key, label, column, per-game?)
+LEADER_CATEGORIES = [
+    ('PTS', 'Points',        'PTS_GP',        True),
+    ('G',   'Goals',         'G_GP',          True),
+    ('A',   'Assists',       'A_GP',          True),
+    ('SOG', 'Shots',         'SOG_GP',        True),
+    ('PPP', 'Power play pts','PPP_GP',        True),
+    ('BLK', 'Blocks',        'BLK_GP',        True),
+    ('HIT', 'Hits',          'HIT_GP',        True),
+    ('PIM', 'Penalty mins',  'PIM_GP',        True),
+]
+
+
+def _leaders_frame():
+    f = df_final_projections.copy()
+    f['PPP_GP'] = pd.to_numeric(f['PPG'], errors='coerce').fillna(0) + \
+                  pd.to_numeric(f['PPA'], errors='coerce').fillna(0)
+    for _, _, col, _ in LEADER_CATEGORIES:
+        f[col] = pd.to_numeric(f[col], errors='coerce').fillna(0.0)
+    f['Pos'] = f['Pos'].astype(str)
+    return f
+
+
+@app.route('/leaders')
+def leaders():
+    """Top-ten boards per category for the coming season."""
+    basis = request.args.get('basis', 'total')          # 'total' or 'per_game'
+    pos_filter = (request.args.get('pos') or '').upper()
+    team_filter = request.args.get('team') or ''
+
+    f = _leaders_frame()
+
+    if team_filter:
+        f = f[f['team'] == team_filter]
+    if pos_filter == 'F':
+        f = f[~f['Pos'].str.contains('D', na=False)]
+    elif pos_filter == 'D':
+        f = f[f['Pos'].str.contains('D', na=False)]
+    elif pos_filter in ('C', 'LW', 'RW'):
+        f = f[f['Pos'].str.contains(pos_filter, na=False)]
+
+    # Full 84 for everyone, matching the projections table and the trade
+    # analyzer, so the same player shows the same total on every page.
+    games = 84.0
+
+    boards = []
+    for key, label, col, _ in LEADER_CATEGORIES:
+        vals = f[col] if basis == 'per_game' else f[col] * games
+        board = pd.DataFrame({
+            'name': f['name'], 'team': f['team'], 'pos': f['Pos'],
+            'image': f['Image'], 'value': vals,
+        }).sort_values('value', ascending=False).head(10)
+        board['value'] = board['value'].round(2 if basis == 'per_game' else 0)
+        peak = float(board['value'].max()) if not board.empty else 0.0
+        board['share'] = (board['value'] / peak * 100).round(1) if peak else 0.0
+        boards.append({'key': key, 'label': label,
+                       'rows': board.to_dict(orient='records')})
+
+    teams_list = sorted(x for x in df_final_projections['team'].dropna().unique())
+    return render_template('leaders.html', boards=boards, teams_list=teams_list,
+                           basis=basis, pos_filter=pos_filter, team_filter=team_filter)
+
+
+@app.route('/compare')
+def compare():
+    players = sorted(df_projections['name'].dropna().unique().tolist())
+    picked = [p for p in request.args.getlist('player') if p in set(players)]
+    if not picked:
+        seed = df_projections.sort_values('PTSTOT', ascending=False)['name'].head(2)
+        picked = seed.tolist()
+    return render_template('compare.html', players=players, picked=picked[:4])
+
+
+@app.route('/api/compare')
+def api_compare():
+    """Seven-year curve plus headline totals for up to four players."""
+    names = request.args.getlist('player')[:4]
+    out = []
+    for nm in names:
+        rows = df_projections[df_projections['name'] == nm]
+        if rows.empty:
+            continue
+        r = rows.iloc[0]
+
+        def num(v, nd=2):
+            v = pd.to_numeric(v, errors='coerce')
+            return None if pd.isna(v) else round(float(v), nd)
+
+        out.append({
+            'name': nm,
+            'team': r.get('team', ''),
+            'pos': r.get('fw_def', ''),
+            'age': num(r.get('age'), 1),
+            'image': r.get('Image') or 'default_logo.png',
+            'gp': num(r.get('GP2'), 0),
+            'g': num(r.get('GTOT'), 0),
+            'a': num(r.get('ATOT'), 0),
+            'pts': num(r.get('PTSTOT'), 0),
+            'pts_per': num(r.get('PTS_Per'), 3),
+            'cap_hit': num(r.get('cap_hit'), 0),
+            'contract': (r.get('contract') or ''),
+            'history': [num(r.get('pts_pg_1'), 3), num(r.get('pts_pg_2'), 3)],
+            'curve': [num(r.get(f'TOTPT_Y{y}'), 3) for y in range(1, 8)],
+        })
+    return jsonify({'players': out})
+
+
+VALUE_SORTS = {
+    'cost_per_point': ('cost_per_point', True,  '$ / point'),
+    'index':          ('index',          False, 'Value index'),
+    'cap_hit':        ('cap_hit',        False, 'Cap hit'),
+    'points':         ('PTSTOT',         False, 'Projected points'),
+    'games':          ('GP2',            False, 'Projected games'),
+    'age':            ('age',            True,  'Age'),
+    'expiry':         ('contract',       True,  'Contract expiry'),
+    'name':           ('name',           True,  'Player'),
+}
+
+
+@app.route('/value')
+def value():
+    """Cap hit against projected production. Uses contract data that the site
+    already stored but never showed."""
+    v = df_projections.copy()
+    v['cap_hit'] = pd.to_numeric(v['cap_hit'], errors='coerce')
+    v['PTSTOT'] = pd.to_numeric(v['PTSTOT'], errors='coerce')
+    v['age'] = pd.to_numeric(v['age'], errors='coerce')
+    v['GP2'] = pd.to_numeric(v['GP2'], errors='coerce')
+    v = v[(v['cap_hit'] > 0) & (v['PTSTOT'] > 0)]
+
+    # The median is taken over the whole priced population, before filtering, so
+    # the index means the same thing no matter how the table is sliced.
+    v['cost_per_point'] = (v['cap_hit'] / v['PTSTOT']).round(0)
+    league_median = float(v['cost_per_point'].median()) if not v.empty else 0.0
+    v['index'] = (league_median / v['cost_per_point'] * 100).round(0)
+
+    v['contract'] = v['contract'].fillna('').astype(str).replace({'nan': '', 'None': ''})
+
+    def num_arg(key):
+        raw = (request.args.get(key) or '').strip()
+        if raw == '':
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    pos_filter = (request.args.get('pos') or '').upper()
+    team_filter = request.args.get('team') or ''
+    expiry = request.args.get('expiry') or ''
+    age_min, age_max = num_arg('age_min'), num_arg('age_max')
+    cap_min, cap_max = num_arg('cap_min'), num_arg('cap_max')   # in $M
+    min_pts = num_arg('min_pts')
+
+    if pos_filter in ('FW', 'DEF'):
+        v = v[v['fw_def'] == pos_filter]
+    if team_filter:
+        v = v[v['team'] == team_filter]
+    if expiry:
+        # Contracts are stored as the expiring season, e.g. "27/28". Two-digit
+        # seasons in this range sort correctly as plain strings.
+        v = v[(v['contract'] != '') & (v['contract'] <= expiry)]
+    if age_min is not None:
+        v = v[v['age'] >= age_min]
+    if age_max is not None:
+        v = v[v['age'] <= age_max]
+    if cap_min is not None:
+        v = v[v['cap_hit'] >= cap_min * 1_000_000]
+    if cap_max is not None:
+        v = v[v['cap_hit'] <= cap_max * 1_000_000]
+    if min_pts is not None:
+        v = v[v['PTSTOT'] >= min_pts]
+
+    sort_key = request.args.get('sort') or 'cost_per_point'
+    if sort_key not in VALUE_SORTS:
+        sort_key = 'cost_per_point'
+    column, default_asc, _ = VALUE_SORTS[sort_key]
+    direction = request.args.get('dir')
+    ascending = default_asc if direction not in ('asc', 'desc') else (direction == 'asc')
+    v = v.sort_values(column, ascending=ascending, kind='mergesort', na_position='last')
+
+    matched = len(v)
+    limit_raw = request.args.get('limit') or '300'
+    limit = None if limit_raw == 'all' else max(int(limit_raw), 1) if limit_raw.isdigit() else 300
+    shown = v if limit is None else v.head(limit)
+
+    cols = ['name', 'team', 'fw_def', 'age', 'cap_hit', 'contract',
+            'PTSTOT', 'GP2', 'cost_per_point', 'index', 'Image']
+    rows = shown[cols].to_dict(orient='records')
+
+    expiries = sorted(x for x in df_projections['contract'].dropna().astype(str).unique()
+                      if x and x not in ('nan', 'None'))
+    teams_list = sorted(x for x in df_projections['team'].dropna().unique())
+
+    return render_template(
+        'value.html',
+        rows=rows,
+        matched=matched,
+        total_priced=len(df_projections[pd.to_numeric(df_projections['cap_hit'], errors='coerce') > 0]),
+        median_cpp=round(league_median),
+        sorts=VALUE_SORTS,
+        sort_key=sort_key,
+        direction='asc' if ascending else 'desc',
+        limit=limit_raw,
+        teams_list=teams_list,
+        expiries=expiries,
+        f={'pos': pos_filter, 'team': team_filter, 'expiry': expiry,
+           'age_min': request.args.get('age_min', ''), 'age_max': request.args.get('age_max', ''),
+           'cap_min': request.args.get('cap_min', ''), 'cap_max': request.args.get('cap_max', ''),
+           'min_pts': request.args.get('min_pts', '')},
+    )
+
+
+@app.route('/healthz')
+def healthz():
+    """Quick self-check. Open /healthz in the browser to confirm which build is
+    running and that JSON output is safe for this Flask install."""
+    import flask as _flask
+    probe = jsonify({'probe': float('nan')}).get_data(as_text=True)
+    nan_safe = 'NaN' not in probe
+
+    sample = None
+    try:
+        no_cap = df_projections[df_projections['cap_hit'].isna()]
+        if not no_cap.empty:
+            name = no_cap['name'].iloc[0]
+            body = _player_payload(name)
+            raw = body[0].get_data(as_text=True) if isinstance(body, tuple) else body.get_data(as_text=True)
+            sample = {'player': name, 'parses_in_browser': 'NaN' not in raw and 'Infinity' not in raw}
+    except Exception as exc:
+        sample = {'error': f'{type(exc).__name__}: {exc}'}
+
+    return jsonify({
+        'build': KUBOTA_BUILD,
+        'flask': getattr(_flask, '__version__', 'unknown'),
+        'pandas': pd.__version__,
+        'json_nan_safe': nan_safe,
+        'database': os.path.basename(DB_PROD_PATH),
+        'skaters_loaded': int(df_projections['name'].nunique()),
+        'uncontracted_player_check': sample,
+    })
+
+
+@app.errorhandler(404)
+def not_found(_e):
+    return render_template('error.html', code=404,
+                           heading="That page isn't here",
+                           message="The link is probably out of date. Everything is "
+                                   "still reachable from the menu up top."), 404
+
+
+@app.errorhandler(500)
+def server_error(_e):
+    return render_template('error.html', code=500,
+                           heading="Something broke on our end",
+                           message="The page did not build. Try it again, and if it "
+                                   "keeps happening drop us a line."), 500
+
+
+@app.context_processor
+def inject_nav():
+    return dict(current_endpoint=(request.endpoint or ''))
+
 
 @app.context_processor
 def inject_team_rankings():

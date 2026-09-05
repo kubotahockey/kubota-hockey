@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .done(function(response) {
                 if (response.error) {
                     console.error('Error from server:', response.error);
-                    alert(response.error);
+                    showPlayerError(playerName, response.error);
                     return;
                 }
 
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!player || !comps) {
                     console.error('Incomplete data received from server:', response);
-                    alert('Incomplete data received from server.');
+                    showPlayerError(playerName, 'The server returned no projection for this player.');
                     return;
                 }
 
@@ -34,10 +34,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayPlayerComparisons(comps.slice(0, 10)); // Limit to top 10 comparables
                 displayPlayerPercentiles(player);
             })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('AJAX request failed:', textStatus, errorThrown);
-                alert('Failed to load player data.');
+            .fail(function (jqXHR, textStatus, errorThrown) {
+                // Say what actually went wrong. A bare "failed to load" gives
+                // nobody anything to act on.
+                var reason = '';
+                try {
+                    var body = JSON.parse(jqXHR.responseText);
+                    if (body && body.error) reason = body.error;
+                } catch (e) {
+                    if (jqXHR.status === 0) {
+                        reason = 'No response from the server. Is it still running?';
+                    } else if (textStatus === 'parsererror') {
+                        reason = 'The server sent a response the browser could not read.';
+                    } else {
+                        reason = 'HTTP ' + jqXHR.status + ' ' + (errorThrown || textStatus);
+                    }
+                }
+                console.error('get_player_data failed', {
+                    player: playerName, status: jqXHR.status,
+                    textStatus: textStatus, body: jqXHR.responseText
+                });
+                showPlayerError(playerName, reason);
             });
+    }
+
+    // Show a failure in the page rather than behind an OK button, so the
+    // details stay on screen while you fix it.
+    function showPlayerError(playerName, reason) {
+        const host = document.getElementById('playerStats');
+        if (!host) { console.error(reason); return; }
+        host.innerHTML =
+            '<div class="card"><div class="card-body">' +
+            '<h4 style="color:var(--goal);margin-bottom:.5rem;">Could not load ' +
+            (playerName ? String(playerName).replace(/[<>&]/g, '') : 'that player') + '</h4>' +
+            '<p style="color:var(--fog);font-size:.9rem;margin:0;">' +
+            (reason || 'Unknown error') + '</p>' +
+            '<p style="color:var(--fog-dim);font-size:.8rem;margin-top:.6rem;">' +
+            'Try another player from the search box. Full details are in the browser console.</p>' +
+            '</div></div>';
+        ['playerChart', 'playerPercentiles', 'playerComparisons'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '';
+        });
     }
 
     // Function to display random player on page load
@@ -48,17 +86,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to display player data
     function displayPlayerData(player, imageLink) {
         if (player) {
+            // 0 / 300 are the sentinels this dataset uses for an undrafted player
+            const dy = Number(player.draft_year);
+            const dp = Number(player.overall);
+            const draftYear = (!dy || dy === 0) ? 'Undrafted' : dy;
+            const draftPick = (!dp || dp >= 300) ? '—' : dp;
             let playerStatsHTML = `
                  <div class="card text-white bg-dark mb-3">
                 <div class="card-body">
-                    <h2 class="card-title"><a href="forecasts.html?player=${player.name}" class="text-white">${player.name}</a></h2>
+                    <h2 class="card-title"><a href="/player?player=${encodeURIComponent(player.name)}" class="text-white">${player.name}</a></h2>
                     <div class="info-row">
                         <p><strong>Age:</strong> ${player.age}</p>
                         <p><strong>Position:</strong> ${player.fw_def}</p>
                     </div>
                     <div class="info-row">
-                        <p><strong>Draft Year:</strong> ${player.draft_year}</p>
-                        <p><strong>Draft Pick:</strong> ${player.overall}</p>
+                        <p><strong>Drafted:</strong> ${draftYear}</p>
+                        <p><strong>Pick:</strong> ${draftPick}</p>
                     </div>
                 </div>
                 <div class="card-body text-left">
@@ -126,35 +169,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="chart-container">
                             <div class="chart-title">GP Percentile</div>
                             <canvas id="gpPercentileChart"></canvas>
-                            <div class="chart-value">${(percentiles.GPPercentile * 100).toFixed(2)}%</div>
+                            <div class="chart-value">${((percentiles.GPPercentile || 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                     <div class="col-sm-3">
                         <div class="chart-container">
                             <div class="chart-title">Goals Percentile</div>
                             <canvas id="gPercentileChart"></canvas>
-                            <div class="chart-value">${(percentiles.GPercentile * 100).toFixed(2)}%</div>
+                            <div class="chart-value">${((percentiles.GPercentile  || 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                     <div class="col-sm-3">
                         <div class="chart-container">
                             <div class="chart-title">Assists Percentile</div>
                             <canvas id="aPercentileChart"></canvas>
-                            <div class="chart-value">${(percentiles.APercentile * 100).toFixed(2)}%</div>
+                            <div class="chart-value">${((percentiles.APercentile  || 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                     <div class="col-sm-3">
                         <div class="chart-container">
                             <div class="chart-title">Points Percentile</div>
                             <canvas id="ptsPercentileChart"></canvas>
-                            <div class="chart-value">${(percentiles.PTSPercentile * 100).toFixed(2)}%</div>
+                            <div class="chart-value">${((percentiles.PTSPercentile|| 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
 
-        document.getElementById('playerPercentiles').innerHTML = percentileHTML;
+        const percentileHost = document.getElementById('playerPercentiles');
+        if (!percentileHost) return;
+        percentileHost.innerHTML = percentileHTML;
 
         const createPercentileChart = (ctx, label, percentile) => {
             new Chart(ctx, {
@@ -162,9 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: ['Achieved', 'Remaining'],
                     datasets: [{
-                        data: [percentile * 100, 100 - (percentile * 100)],
-                        backgroundColor: ['#00e676', '#24155A'],
-                        borderColor: ['#00e676', '#24155A'],
+                        data: [(percentile || 0) * 100, 100 - ((percentile || 0) * 100)],
+                        backgroundColor: ['#00e676', 'rgba(255,255,255,0.07)'],
+                        borderColor: ['#00e676', 'rgba(255,255,255,0.07)'],
                         borderWidth: 1
                     }]
                 },
@@ -188,10 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        createPercentileChart(document.getElementById('gpPercentileChart').getContext('2d'), 'GP Percentile', percentiles.GPPercentile);
-        createPercentileChart(document.getElementById('gPercentileChart').getContext('2d'), 'Goals Percentile', percentiles.GPercentile);
-        createPercentileChart(document.getElementById('aPercentileChart').getContext('2d'), 'Assists Percentile', percentiles.APercentile);
-        createPercentileChart(document.getElementById('ptsPercentileChart').getContext('2d'), 'Points Percentile', percentiles.PTSPercentile);
+        [['gpPercentileChart', percentiles.GPPercentile],
+         ['gPercentileChart',  percentiles.GPercentile],
+         ['aPercentileChart',  percentiles.APercentile],
+         ['ptsPercentileChart', percentiles.PTSPercentile]].forEach(function (pair) {
+            const el = document.getElementById(pair[0]);
+            if (el) createPercentileChart(el.getContext('2d'), pair[0], pair[1] || 0);
+        });
     }
 
 function displayPlayerChart(player, comps) {
@@ -218,8 +266,8 @@ function displayPlayerChart(player, comps) {
         const playerDataSet = {
             label: player.name + ' Projection',
             data: playerData,
-            borderColor: 'rgba(46, 204, 113, 1)', // Teal color for the main player
-            backgroundColor: 'rgba(46, 204, 113, 0)', // Light teal fill
+            borderColor: '#00e676',
+            backgroundColor: 'rgba(0, 230, 118, 0.08)',
             borderWidth: 3,
             fill: false,
             tension: 0.4, // Smooths the line
@@ -274,8 +322,8 @@ function displayPlayerChart(player, comps) {
             options: {
                 scales: {
                     y: {
-                        beginAtZero: false,
-                        max: 2,
+                        beginAtZero: true,
+                        suggestedMax: 1.6,
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.7)' // Lighter white color for ticks
                         },
@@ -307,14 +355,8 @@ function displayPlayerChart(player, comps) {
                             usePointStyle: true
                         }
                     },
-                    title: {
-                        display: true,
-                        text: '7 Year Point per Game Projection - Top 3 Comparables',
-                        color: 'white', // Title color
-                        font: {
-                            size: 16
-                        }
-                    },
+                    // The panel above the canvas already carries the title.
+                    title: { display: false },
                     tooltip: {
                         enabled: true,
                         mode: 'index',
@@ -339,7 +381,7 @@ function displayPlayerChart(player, comps) {
         // Determine the maximum values for scaling the bar widths
         let maxScore = Math.max(...comps.map(comp => parseFloat(comp.SCORE).toFixed(2)));
         let maxGP = Math.max(...comps.map(comp => Math.round(comp.TOTAL_GP)));
-        let maxPIM = Math.max(...comps.map(comp => Math.round(comp.PIMproj)));
+        let safeMax = (v) => (isFinite(v) && v > 0) ? v : 1;
         let maxGoals = Math.max(...comps.map(comp => Math.round(comp.TOTAL_G)));
         let maxAssists = Math.max(...comps.map(comp => Math.round(comp.TOTAL_A)));
         let maxPoints = Math.max(...comps.map(comp => Math.round(comp.TOTAL_PTS))); // Assuming Points is the sum of Goals and Assists
@@ -357,7 +399,7 @@ function displayPlayerChart(player, comps) {
                             <th>Age</th>
                             <th>Height</th>
                             <th>Weight</th>
-                            <th>Pick Number</th>
+                            <th>Pick</th>
                             <th class="separator">Season</th>
                             <th>SCORE</th>
                             <th>GP</th>
@@ -381,36 +423,36 @@ function displayPlayerChart(player, comps) {
                         <td>${comp.age}</td>
                         <td>${comp.height_cm}</td>
                         <td>${comp.weight_lbs}</td>
-                        <td>${comp.Overall}</td>
+                        <td>${(!comp.Overall || comp.Overall >= 300) ? 'Undrafted' : comp.Overall}</td>
                         <td class="separator">${comp.season_2}</td>
                         <td>
                             <div class="bar-container">
                                 <div class="bar-label">${roundedScore}</div>
-                                <div class="bar bar-score" style="width: ${(roundedScore / maxScore) * 100}%"></div>
+                                <div class="bar bar-score" style="width: ${(roundedScore / safeMax(maxScore)) * 100}%"></div>
                             </div>
                         </td>
                         <td>
                             <div class="bar-container">
                                 <div class="bar-label">${roundedGP}</div>
-                                <div class="bar" style="width: ${(roundedGP / maxGP) * 100}%"></div>
+                                <div class="bar" style="width: ${(roundedGP / safeMax(maxGP)) * 100}%"></div>
                             </div>
                         </td>
                         <td>
                             <div class="bar-container">
                                 <div class="bar-label">${roundedGoals}</div>
-                                <div class="bar" style="width: ${(roundedGoals / maxGoals) * 100}%"></div>
+                                <div class="bar" style="width: ${(roundedGoals / safeMax(maxGoals)) * 100}%"></div>
                             </div>
                         </td>
                         <td>
                             <div class="bar-container">
                                 <div class="bar-label">${roundedAssists}</div>
-                                <div class="bar" style="width: ${(roundedAssists / maxAssists) * 100}%"></div>
+                                <div class="bar" style="width: ${(roundedAssists / safeMax(maxAssists)) * 100}%"></div>
                             </div>
                         </td>
                         <td>
                             <div class="bar-container">
                                 <div class="bar-label">${roundedPoints}</div>
-                                <div class="bar" style="width: ${(roundedPoints / maxPoints) * 100}%"></div>
+                                <div class="bar" style="width: ${(roundedPoints / safeMax(maxPoints)) * 100}%"></div>
                             </div>
                         </td>
                     </tr>`;
@@ -550,5 +592,6 @@ function displayPlayerChart(player, comps) {
     });
 
     // Add event listener to the export button
-    document.getElementById('exportButton').addEventListener('click', exportToPNG);
+    const exportBtn = document.getElementById('exportButton');
+    if (exportBtn) exportBtn.addEventListener('click', exportToPNG);
 });

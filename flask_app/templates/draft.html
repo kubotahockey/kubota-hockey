@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Draft class projections — Kubota Hockey{% endblock %}
+{% block meta_description %}Draft-eligible prospects matched to the historical players they most resemble, with a weighted consensus curve.{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Draft class</h1>
+  <p class="lede">
+    Draft-eligible skaters run through the same comparables model. Because prospects
+    have short records, these projections are wider than the NHL ones — read the
+    spread between comparables as the real signal, not the single line.
+  </p>
+</div>
+
+<div class="row">
+  <div class="col-lg-3 mb-4">
+    <div class="card">
+      <div class="card-header"><h4 class="mb-0">Prospects</h4></div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush" style="max-height:640px;overflow-y:auto;">
+          {% for p in prospects %}
+          <li class="list-group-item {% if p.target_player == selected %}is-on{% endif %}">
+            <a href="{{ url_for('draft', prospect=p.target_player) }}"
+               class="d-flex justify-content-between align-items-center"
+               style="color: {% if p.target_player == selected %}var(--green){% else %}var(--ice){% endif %};">
+              <span>
+                {{ p.target_player }}
+                <span class="d-block text-muted" style="font-size:.72rem;">
+                  {{ p.position }} &middot; {{ p.comps }} comparables
+                </span>
+              </span>
+              <span class="rank-cell">{{ p.top_score | round(2) }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    {% if comps %}
+    <div class="team-header d-flex align-items-center mb-4">
+      <h1>{{ selected }}</h1>
+    </div>
+
+    <div class="chart-panel mb-4">
+      <div class="hero-chart-head">
+        <strong>Points per game</strong>
+        <span>Weighted consensus against the ten closest comparables</span>
+      </div>
+      <div style="position:relative;height:340px;"><canvas id="draftChart"></canvas></div>
+    </div>
+
+    <div class="zone-line">
+      <h2>Closest historical comparables</h2>
+      <p class="zone-note">Ranked by similarity score</p>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Comparable</th>
+            <th>Draft year</th>
+            <th class="t">Pos</th>
+            <th class="t">Pick</th>
+            <th>Similarity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in comps %}
+          <tr>
+            <td class="rank-cell">{{ loop.index }}</td>
+            <td>{{ c.player }}</td>
+            <td>{{ c.season | int if c.season else '&mdash;' }}</td>
+            <td class="t"><span class="badge-pos">{{ c.position }}</span></td>
+            <td>{{ 'Undrafted' if not c.pick or c.pick >= 300 else c.pick | int }}</td>
+            <td>
+              <div style="min-width:110px;">
+                <div class="bar-label">{{ c.score }}</div>
+                <div class="meter"><span class="bar-score" style="width: {{ (c.score * 100) | round(0) }}%;position:absolute;top:0;bottom:0;left:0;"></span></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No draft projections are loaded for this prospect yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if comps %}
+<script id="draftData" type="application/json">{{ {'comps': comps, 'consensus': consensus, 'name': selected} | tojson }}</script>
+<script>
+(function () {
+  var el = document.getElementById('draftChart');
+  if (!el || !window.Chart) return;
+  var d = JSON.parse(document.getElementById('draftData').textContent);
+  var K = window.KUBOTA;
+
+  var sets = d.comps.map(function (c) {
+    return {
+      label: c.player, data: c.curve,
+      borderColor: 'rgba(147,174,196,.35)', borderWidth: 1,
+      pointRadius: 0, tension: .35, fill: false
+    };
+  });
+  sets.push({
+    label: d.name + ' (consensus)', data: d.consensus,
+    borderColor: K.green, backgroundColor: 'rgba(0,230,118,.08)',
+    borderWidth: 3, pointRadius: 3, pointBackgroundColor: K.green,
+    tension: .35, fill: true
+  });
+
+  new Chart(el.getContext('2d'), {
+    type: 'line',
+    data: { labels: ['Yr 1','Yr 2','Yr 3','Yr 4','Yr 5','Yr 6','Yr 7'], datasets: sets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, grid: { color: K.line }, border: { display: false } },
+        x: { grid: { display: false }, border: { color: K.line } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (t) {
+          return t.dataset.label + ': ' + (t.raw == null ? '—' : Number(t.raw).toFixed(2));
+        } } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

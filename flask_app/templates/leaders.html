@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Projected leaders — Kubota Hockey{% endblock %}
+{% block meta_description %}Projected category leaders for the coming NHL season, filtered by team and position.{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Projected leaders</h1>
+  <p class="lede">
+    Who the model has finishing on top in each category this season. Everyone is run
+    over a full 84 games, the same basis as the projections table, so these are
+    production numbers and not availability numbers. Switch to per game if you want
+    the rate on its own.
+  </p>
+</div>
+
+<form class="filter-bar" method="get">
+  <div class="form-group">
+    <label for="basis">Measure</label>
+    <select class="form-control" id="basis" name="basis" onchange="this.form.submit()">
+      <option value="total" {% if basis == 'total' %}selected{% endif %}>Season total (84 GP)</option>
+      <option value="per_game" {% if basis == 'per_game' %}selected{% endif %}>Per game</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="pos">Position</label>
+    <select class="form-control" id="pos" name="pos" onchange="this.form.submit()">
+      <option value="">All skaters</option>
+      <option value="F"  {% if pos_filter == 'F'  %}selected{% endif %}>Forwards</option>
+      <option value="C"  {% if pos_filter == 'C'  %}selected{% endif %}>Centres</option>
+      <option value="LW" {% if pos_filter == 'LW' %}selected{% endif %}>Left wing</option>
+      <option value="RW" {% if pos_filter == 'RW' %}selected{% endif %}>Right wing</option>
+      <option value="D"  {% if pos_filter == 'D'  %}selected{% endif %}>Defence</option>
+    </select>
+  </div>
+  <div class="form-group" style="min-width:220px;">
+    <label for="team">Team</label>
+    <select class="form-control" id="team" name="team" onchange="this.form.submit()">
+      <option value="">Every team</option>
+      {% for t in teams_list %}
+      <option value="{{ t }}" {% if team_filter == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label>&nbsp;</label>
+    <div><a href="{{ url_for('leaders') }}" class="chip">Clear filters</a></div>
+  </div>
+  <noscript><button class="btn btn-primary" type="submit">Apply</button></noscript>
+</form>
+
+{% if boards and boards[0]['rows'] %}
+<div class="board-grid">
+  {% for board in boards %}
+  <div class="board">
+    <h3>{{ board.label }}</h3>
+    <ol>
+      {% for row in board.rows %}
+      <li {% if loop.first %}class="is-lead"{% endif %}>
+        <span class="pos">{{ loop.index }}</span>
+        <img src="{{ url_for('static', filename='images/logo_teams/' + (row.image or 'default_logo.png')) }}"
+             alt="" onerror="this.style.visibility='hidden'">
+        <span class="who">
+          <a href="{{ url_for('player_page', player=row.name) }}">{{ row.name }}</a>
+          <span class="sub">{{ row.pos }} &middot; {{ row.team }}</span>
+        </span>
+        <span class="val">{{ row.value | round(2 if basis == 'per_game' else 0) | int if basis != 'per_game' else '%.2f' % row.value }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Nobody matches those filters. Try a wider position or a different team.</p>
+</div>
+{% endif %}
+{% endblock %}

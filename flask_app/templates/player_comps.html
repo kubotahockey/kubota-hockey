@@ -1,77 +1,109 @@
 {% extends "base.html" %}
 
-{% block title %}Player Comparisons{% endblock %}
+{% block title %}All comparables — Kubota Hockey{% endblock %}
+{% block meta_description %}Every historical comparable in the Kubota database, searchable by current or historical player.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="text-center text-white mb-4">Player Comparisons</h1>
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="form-group">
-                <label for="playerSearch" class="text-white">Search for a Player:</label>
-                <input type="text" class="form-control bg-dark text-light mx-auto" id="playerSearch" placeholder="Enter player name..." title="Type to search for a player" style="max-width: 500px;">
-            </div>
-            <table id="compsTable" class="table table-dark table-hover">
-                <thead>
-                    <tr>
-                        <th>Historical Player</th>
-                        <th>Current Player</th>
-                        <th>SCORE</th>
-                        <th>Season</th>
-                        <th>Age</th>
-                        <th>Position</th>
-                        <th>Height</th>
-                        <th>Weight</th>
-                        <th>Draft Year</th>
-                        <th>Pick Number</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+<div class="page-head">
+    <h1>All comparables</h1>
+    <p class="lede">
+        Every current player matched to every historical player the model considers
+        similar, with the similarity score behind the match. Search by either name.
+    </p>
+</div>
+
+<div class="filter-bar">
+    <div class="form-group" style="flex:1 1 340px;">
+        <label for="playerSearch">Search either name</label>
+        <input type="text" class="form-control" id="playerSearch"
+               placeholder="Historical or current player&hellip;">
     </div>
 </div>
 
-<!-- Include DataTables -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap4.min.css">
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.3/js/dataTables.bootstrap4.min.js"></script>
+<div class="table-responsive">
+    <table id="compsTable" class="table table-hover" style="width:100%;">
+        <thead>
+            <tr>
+                <th>Historical player</th>
+                <th>Current player</th>
+                <th>Score</th>
+                <th>Season</th>
+                <th>Age</th>
+                <th class="t">Pos</th>
+                <th>Height</th>
+                <th>Weight</th>
+                <th class="t">Draft year</th>
+                <th>Pick</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
-$(document).ready(function() {
+$(document).ready(function () {
+    function dash(d) { return (d === null || d === undefined || d === '') ? '—' : d; }
+    function whole(d) { return (d === null || d === undefined) ? '—' : Math.round(d); }
+
     var table = $('#compsTable').DataTable({
-        "processing": true,
-        "serverSide": true,
-        "ajax": {
-            "url": "/api/player_comps",
-            "type": "GET"
-        },
-        "columns": [
-            { "data": "Comparables" },
-            { "data": "name" },
-            { "data": "SCORE" },
-            { "data": "season" },
-            { "data": "age" },
-            { "data": "fw_def" },
-            { "data": "Height" },
-            { "data": "Weight" },
-            { "data": "draft_year" },
-            { "data": "pick_number" }
+        processing: true,
+        serverSide: true,
+        ajax: { url: "{{ url_for('api_player_comps') }}", type: 'GET' },
+        columns: [
+            { data: 'comparable' },
+            { data: 'current_player', render: dash },
+            { data: 'score', render: function (d) {
+                if (d === null || d === undefined) return '—';
+                var pct = Math.max(0, Math.min(1, d)) * 100;
+                return '<div class="bar-container">' +
+                       '<div class="bar-label">' + Number(d).toFixed(2) + '</div>' +
+                       '<div class="bar bar-score" style="width:' + pct + '%"></div></div>';
+            } },
+            { data: 'season', render: whole },
+            { data: 'age', render: whole },
+            { data: 'position', render: function (d) {
+                return d ? '<span class="badge-pos">' + d + '</span>' : '—';
+            } },
+            { data: 'height', render: function (d) { return d ? Math.round(d) + ' cm' : '—'; } },
+            { data: 'weight', render: function (d) { return d ? Math.round(d) + ' kg' : '—'; } },
+            { data: 'draft_year', render: function (d) {
+                // 0 is the sentinel this dataset uses for an undrafted player
+                return (!d || d === 0) ? 'Undrafted' : Math.round(d);
+            } },
+            { data: 'pick_number', render: function (d) {
+                // 300 is the sentinel for "went undrafted"
+                return (!d || d >= 300) ? '—' : Math.round(d);
+            } }
         ],
-        "paging": true,
-        "pageLength": 15,
-        "searching": true,
-        "info": false,
-        "ordering": true,
-        "order": [[8, "desc"]] // Sort by SCORE descending
+        columnDefs: [
+            { targets: [0, 1, 5, 8], className: 't' }
+        ],
+        paging: true,
+        pageLength: 25,
+        lengthChange: false,
+        searching: true,
+        dom: 'rtip',
+        info: true,
+        ordering: true,
+        order: [[2, 'desc']],
+        language: {
+            processing: 'Loading comparables&hellip;',
+            info: '_START_–_END_ of _TOTAL_ comparables',
+            infoFiltered: '',
+            zeroRecords: 'No comparables match that name.'
+        }
     });
 
-    // Custom search functionality
-    $('#playerSearch').on('keyup', function() {
-        table.search(this.value).draw();
+    // Debounced search against the server-side endpoint
+    var t;
+    $('#playerSearch').on('keyup', function () {
+        var v = this.value;
+        clearTimeout(t);
+        t = setTimeout(function () { table.search(v).draw(); }, 300);
     });
 });
 </script>
 {% endblock %}
-

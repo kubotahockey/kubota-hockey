@@ -3,31 +3,28 @@
 {% block title %} Current Year Projections - Kubota Hockey {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="text-center mb-4">Player Full Season Stats</h1>
+<div class="container-fluid">
+    <div class="page-head">
+        <h1>This season's projections</h1>
+        <p class="lede">
+            Every NHL skater projected for the full season, scored with your league
+            settings and ranked by value over replacement. The table starts on a
+            standard 12-team points league. Change whatever you need and hit
+            recalculate.
+        </p>
+    </div>
 
     <!-- Instructions Section -->
-    <div class="instructions-section bg-dark text-light p-4 mb-4 rounded">
-        <h5 class="mb-3" style="text-decoration: underline; color: #00e676;">Instructions</h5>
+    <div class="instructions-section mb-4">
+        <h5 class="mb-3">How the settings work</h5>
         <p><strong>Points League:</strong> Adjust the scoring settings to reflect your league's point system. The "Fantasy Points" will be calculated based on these settings.</p>
         <p><strong>Categories League:</strong> The scoring settings allow you to include or exclude categories by setting them to 1 (include) or 0 (exclude). The player's total value is calculated based on how much they exceed or fall below the league average in these categories.</p>
-        <p><strong>Games Played Settings:</strong></p>
-        <ul>
-            <li><strong>84 Games:</strong> Assumes every player will play the full season (84 games), putting everyone on the same level.</li>
-            <li><strong>GP Projection:</strong> Considers historical missed games and injuries, providing a more cautious projection for each player.</li>
-        </ul>
+        <p><strong>Games played:</strong> Every skater is run over a full 84-game season, so you are comparing production and not availability.</p>
     </div>
     
-    <form id="scoring-settings-form" class="mb-4">
-    <!-- First Row: Season Length and League Type -->
+    <form id="scoring-settings-form" class="settings-panel mb-4">
+    <!-- First Row: League Type, Position Grouping, Teams -->
         <div class="form-row">
-            <div class="form-group col-sm-6 col-lg-2">
-                <label for="season-length">Season</label>
-                <select class="form-control" id="season-length" name="season_length">
-                    <option value="84">84</option>
-                    <option value="GPNEW">GP Projection</option>
-                </select>
-            </div>
             <div class="form-group col-sm-6 col-lg-2">
                 <label for="league-type">League Type</label>
                 <select class="form-control" id="league-type" name="league_type">
@@ -51,7 +48,7 @@
         </div>
     
         <!-- Roster Inputs Section (Dynamic based on Position Grouping) -->
-        <h5 class="text-center mb-3">Roster Settings</h5>
+        <h5 class="panel-title">Roster settings</h5>
         
         <!-- Split Roster Settings (LW, RW, C, D, UTIL, Bench) -->
         <div id="roster-settings-split" class="form-row">
@@ -100,11 +97,11 @@
 
     
         <!-- Scoring Settings Section -->
-        <h5 class="text-center mb-3">Scoring Settings</h5>
+        <h5 class="panel-title mt-4">Scoring settings</h5>
         
         <!-- Categories Selection (Checkboxes) -->
         <div id="categories-checkboxes" class="mb-3" style="display:none;">
-          <h6 class="mb-2">Choose Categories</h6>
+          <h6 class="mb-2">Categories counted</h6>
           <div class="form-row">
             <!-- Row 1 -->
             <div class="form-group col-6 col-md-3">
@@ -337,27 +334,36 @@
         
         <!-- Submit and Export Buttons -->
         <div class="form-row mt-4">
-            <div class="col">
-                <button type="submit" class="btn btn-primary">Calculate Fantasy Points</button>
+            <div class="col d-flex" style="gap:.6rem;">
+                <button type="submit" class="btn btn-primary">Recalculate rankings</button>
+                <button id="export-csv" type="button" class="btn btn-outline-light">
+                    <i class="fas fa-file-csv"></i> Download CSV
+                </button>
             </div>
-            <button id="export-csv" type="button" class="btn btn-primary ml-2">
-                <i class="fas fa-file-csv"></i> Export CSV
-            </button>
         </div>
     </form>
 
     <!-- Search bar for filtering -->
-    <input type="text" id="search-bar" class="form-control mb-3" placeholder="Search for players, teams positions...">
+    <div class="filter-bar">
+        <div class="form-group" style="flex:1 1 320px;">
+            <label for="search-bar">Find a player</label>
+            <input type="text" id="search-bar" class="form-control" placeholder="Name, team or position&hellip;">
+        </div>
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <div><span class="chip">Filter boxes sit in the table header</span></div>
+        </div>
+    </div>
 
     <!-- Table for displaying results -->
-    <div id="player-data" class="table-responsive">
+    <div id="player-data" class="table-responsive table-scroll">
         <table class="table table-hover table-custom" id="player-table">
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th data-sort="name">Player</th>
-                    <th data-sort="team">Team</th>
-                    <th data-sort="Pos">Position</th>
+                    <th class="t" data-sort="name">Player</th>
+                    <th class="t" data-sort="team">Team</th>
+                    <th class="t" data-sort="Pos">Pos</th>
                     <th data-sort="GP">GP</th>
                     <th data-sort="G_GP">G</th>
                     <th data-sort="A_GP">A</th>
@@ -367,10 +373,10 @@
                     <th data-sort="PLUSMINUS_GP">+/-</th>
                     <th data-sort="PPG">PPG</th>
                     <th data-sort="PPA">PPA</th>
-                    <th data-sort="PPA">PPP</th>
+                    <th data-sort="PPP">PPP</th>
                     <th data-sort="SHG">SHG</th>
                     <th data-sort="SHA">SHA</th>
-                    <th data-sort="SHA">SHP</th>
+                    <th data-sort="SHP">SHP</th>
                     <th data-sort="BLK_GP">BLK</th>
                     <th data-sort="HIT_GP">HIT</th>
                     <th data-sort="FOL_GP">FOL</th>
@@ -380,7 +386,7 @@
                 </tr>
             </thead>
             <tbody id="table-body">
-                <!-- The rows will be injected here by the Flask route -->
+                {{ initial_rows | safe }}
             </tbody>
         </table>
     </div>
@@ -388,3 +394,6 @@
 
 {% endblock %}
 
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/currentyear_scripts.js') }}"></script>
+{% endblock %}

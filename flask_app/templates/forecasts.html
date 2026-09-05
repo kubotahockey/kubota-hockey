@@ -1,67 +1,84 @@
 {% extends "base.html" %}
 
-{% block title %}7 Year Projections - Kubota Hockey{% endblock %}
+{% block title %}Seven-year projections — Kubota Hockey{% endblock %}
+{% block meta_description %}Seven-year NHL-equivalent projections for every skater in the Kubota database.{% endblock %}
+{% block main_class %}container-fluid{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="text-center text-white mb-4"><i class="fas fa-chart-line"></i> 7 Year NHLe Forecasts</h1>
-    <div class="form-group">
-        <label for="positionFilter" class="text-white">Filter by Position:</label>
-        <select class="form-control bg-dark text-light" id="positionFilter">
-            <option value="">All Positions</option>
-            <option value="FW">Forward</option>
-            <option value="DEF">Defense</option>
+<div class="page-head">
+    <h1>The next seven years</h1>
+    <p class="lede">
+        Seven-year totals for every skater in the database. Everything is
+        NHL-equivalent, so a prospect in the SHL lines up directly against an NHL
+        regular.
+    </p>
+</div>
+
+<div class="filter-bar">
+    <div class="form-group" style="min-width:200px;">
+        <label for="positionFilter">Position</label>
+        <select class="form-control" id="positionFilter">
+            <option value="">All skaters</option>
+            <option value="FW">Forwards</option>
+            <option value="DEF">Defence</option>
         </select>
     </div>
-        <div class="d-flex justify-content-end mb-2">
-      <button id="exportForecastsCsv" class="btn btn-sm btn-success">
-        <i class="fas fa-file-csv"></i> Export CSV
-      </button>
+    <div class="form-group" style="flex:1 1 260px;">
+        <label for="searchBox">Find a player</label>
+        <input type="text" class="form-control" id="searchBox" placeholder="Start typing a name&hellip;">
     </div>
-    <div class="table-responsive">
-        <table id="forecastsTable" class="table table-dark table-hover table-striped table-sm">
-            <thead>
-                <tr class="table-header">
-                    <th colspan="3" class="border-right">Player Info</th>
-                    <th colspan="4" class="border-right">Total 7 Year Projections</th>
-                    <th colspan="4" class="border-right">7 Year Per Game Projections</th>
-                </tr>
+    <div class="form-group">
+        <label>&nbsp;</label>
+        <div>
+            <button id="exportForecastsCsv" class="btn btn-outline-light">
+                <i class="fas fa-file-csv"></i> Download CSV
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive table-scroll">
+    <table id="forecastsTable" class="table table-hover table-striped table-sm">
+        <thead>
+            <tr class="table-header">
+                <th colspan="3" class="border-right">Player</th>
+                <th colspan="4" class="border-right">Seven-year totals</th>
+                <th colspan="3">Per game</th>
+            </tr>
+            <tr>
+                <th class="name-column">Name</th>
+                <th class="t">Pos</th>
+                <th class="border-right">Age</th>
+                <th class="sortable" data-column="GP">GP</th>
+                <th class="sortable" data-column="G">G</th>
+                <th class="sortable" data-column="A">A</th>
+                <th class="border-right" data-column="PTS">PTS</th>
+                <th>G/GP</th>
+                <th>A/GP</th>
+                <th>PTS/GP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
                 <tr>
-                    <th class="name-column">Name</th>
-                    <th>Position</th>
-                    <th class="border-right">Age</th>
-                    <th class="sortable" data-column="GP">GP</th>
-                    <th class="sortable" data-column="G">G</th>
-                    <th class="sortable" data-column="A">A</th>
-                    <th class="border-right" data-column="PTS">PTS</th>
-                    <th>G/GP</th>
-                    <th>A/GP</th>
-                    <th class="border-right">PTS/GP</th>
+                    <td><a href="{{ url_for('player_page', player=row.name) }}">{{ row.name }}</a></td>
+                    <td><span class="badge-pos">{{ row.fw_def }}</span></td>
+                    <td class="border-right">{{ row.age }}</td>
+                    <td class="bar-cell" data-column="GP" data-value="{{ row.GP2 }}" data-order="{{ row.GP2 }}"></td>
+                    <td class="bar-cell" data-column="G" data-value="{{ row.GTOT }}" data-order="{{ row.GTOT }}"></td>
+                    <td class="bar-cell" data-column="A" data-value="{{ row.ATOT }}" data-order="{{ row.ATOT }}"></td>
+                    <td class="border-right bar-cell" data-column="PTS" data-value="{{ row.PTSTOT }}" data-order="{{ row.PTSTOT }}"></td>
+                    <td>{{ row.G_per }}</td>
+                    <td>{{ row.A_per }}</td>
+                    <td>{{ row.PTS_Per }}</td>
                 </tr>
-            </thead>
-            <tbody>
-                {% for row in data %}
-                    <tr>
-                        <td><a href="{{ url_for('player_page') }}?player={{ row.name }}" class="text-white">{{ row.name }}</a></td>
-                        <td>{{ row.fw_def }}</td>
-                        <td class="border-right">{{ row.age }}</td>
-                        <td class="bar-cell" data-column="GP" data-value="{{ row.GP2 }}" data-order="{{ row.GP2 }}"></td>
-                        <td class="bar-cell" data-column="G" data-value="{{ row.GTOT }}" data-order="{{ row.GTOT }}"></td>
-                        <td class="bar-cell" data-column="A" data-value="{{ row.ATOT }}" data-order="{{ row.ATOT }}"></td>
-                        <td class="border-right bar-cell"  data-column="PTS" data-value="{{ row.PTSTOT }}" data-order="{{ row.PTSTOT}}"></td>
-                        <td>{{ row.G_per }}</td>
-                        <td>{{ row.A_per }}</td>
-                        <td class="border-right">{{ row.PTS_Per }}</td>
-                
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Added Chart.js library -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="{{ url_for('static', filename='js/forecasts_scripts.js') }}"></script>
 {% endblock %}

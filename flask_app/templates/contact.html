@@ -1,25 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}Contact - Kubota Hockey{% endblock %}
+{% block title %}Contact — Kubota Hockey{% endblock %}
+{% block meta_description %}Get in touch with Kubota Hockey about the projections, or support the site.{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="text-center text-white mb-4"><i class="fas fa-envelope"></i> Contact Us</h1>
-    <p class="text-white text-center mb-4">If you have any questions, feedback, or inquiries, feel free to reach out to us using the information below.</p>
-    
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h4 class="text-white"><i class="fas fa-envelope"></i> Email</h4>
-            <p class="text-white">kubotahockey@outlook.com</p>
-            <h4 class = "text-white"><i class = "fab fa-reddit"></i> Reddit </h4>
-            <p class = "text-white">u/RobertKoho</p>
-            <a href="https://buymeacoffee.com/kubotahockey" class="text-white" style="text-decoration: none;">
-            <h4><i class="fas fa-coffee"></i> Buy me a coffee!</h4>
-            <p class = "text-white">Kubota Hockey is free to use. If you wish to support the site, click the coffee icon above!</p>
-            <a href="https://www.youtube.com/@WhatsHappeningHockey" class="text-white" style="text-decoration: none;">
-            <h4 class = "text-white"><i class = "fab fa-youtube"></i> What's Happening Hockey Channel</h4>
-            <p class = "text-white">Check out our What's Happening Hockey youtube channel for NHL video content</p>
-            </a>
+<div class="page-head">
+    <h1>Contact</h1>
+    <p class="lede">
+        Questions about a projection, a player who looks wrong, or a feature you
+        want &mdash; all of it is welcome.
+    </p>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fas fa-envelope"></i> Email</h4>
+                <p><a href="mailto:kubotahockey@outlook.com">kubotahockey@outlook.com</a></p>
+
+                <h4 class="mt-4"><i class="fab fa-reddit"></i> Reddit</h4>
+                <p>u/RobertKoho</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fab fa-youtube"></i> What's Happening Hockey</h4>
+                <p>NHL video content, and breakdowns of where the model disagrees with consensus.</p>
+                <a href="https://www.youtube.com/@WhatsHappeningHockey" class="btn btn-outline-light" target="_blank" rel="noopener">Watch on YouTube</a>
+
+                <h4 class="mt-4"><i class="fas fa-coffee"></i> Support the site</h4>
+                <p>Kubota Hockey is free to use. If you find it useful, you can help cover the hosting.</p>
+                <a href="https://buymeacoffee.com/kubotahockey" class="btn btn-primary" target="_blank" rel="noopener">Buy me a coffee</a>
+            </div>
         </div>
     </div>
 </div>

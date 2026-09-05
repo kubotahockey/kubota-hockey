@@ -1,83 +1,139 @@
 {% extends "base.html" %}
 
-{% block title %}About - Kubota Hockey{% endblock %}
+{% block title %}How the model works — Kubota Hockey{% endblock %}
+{% block meta_description %}Kubota uses k-nearest-neighbour matching to find the historical players a skater most resembles, then ages him the way those players actually aged.{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="text-center text-white mb-4"><i class="fas fa-info-circle"></i> About Us</h1>
-    <div class="row">
-        <div class="col-md-12">
-            <p class="text-white">KUBOTA Hockey seeks to provide high quality projections for professional hockey players around the world.</p>
-            <p class="text-white">Having enjoyed success with the initial release of the KUBOTA projection system in 2023-2024, the new website for KUBOTA hockey has taken things even further. With improvements made to the base model along with an all new NHLe model, KUBOTA hockey is your one stop shop for fantasy and hockey enthusiasts alike.</p>
-            <p class="text-white">Based on the PECOTA system developed by Nate Silver in the early 2000’s, KUBOTA uses k-nearest neighbor machine learning to determine historical comparables for almost every rostered and NHL affiliated player heading into the current season. </p>
-            <p class="text-white">This allows for an age regression to occur for a specific player tailored to players from the past who profile most similarly. 37 year old Sidney Crosby will not regress the same way your average 37 year old would. This is the crux of the KUBOTA system. </p>
-        </div>
-    </div>
+<div class="page-head">
+    <h1>How the model works</h1>
+    <p class="lede">
+        Kubota projects hockey players by finding the skaters in history they most
+        resemble, then ageing them the way those players actually aged.
+    </p>
+</div>
 
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <h2 class="text-white">The Nitty Gritty</h2>
-            <p class="text-white">KUBOTA Hockey currently consists of three unique player models to provide a wide range of predictions that best accommodate the players within our database.</p>
-            <p class="text-white"><strong>1. KUBOTA NHL</strong><br>
-              - The most comprehensive of the three and Kubota Hockey’s core model.<br>
-              - Finds player comparables dating back to the 1963 season.<br>
-              - Projects the following stats for all NHL players who have played NHL games in all three of the prior seasons:
-              <ul>
-                <li>GP (Games Played)</li>
-                <li>G (Goals)</li>
-                <li>A (Assists)</li>
-                <li>PTS (Points)</li>
-                <li>SOG (Shots on Goal)</li>
-                <li>PIM (Penalty Minutes)</li>
-                <li>+/- (Plus/Minus)</li>
-                <li>PPG (Power Play Goals)</li>
-                <li>PPA (Power Play Assists)</li>
-                <li>SHG (Short-Handed Goals)</li>
-                <li>SHA (Short-Handed Assists)</li>
-              </ul>
-            </p>
-            <p class="text-white">
-                <strong>2. KUBOTA NHL PERIPHERALS</strong><br>
-                  - Due to NHL hit and block data being made available after the 2007 season, this model performs the same process as the original KUBOTA NHL model but specifically for HITS and BLOCKS:
-                  <ul>
-                    <li>BLK (Blocks)</li>
-                    <li>HIT (Hits)</li>
-                  </ul>
+<p>
+    The approach comes from PECOTA, the baseball system Nate Silver built in the
+    early 2000s. Kubota uses k-nearest-neighbour matching to find comparables for
+    almost every rostered and NHL-affiliated skater going into the season.
+</p>
+<p>
+    Age curves are not universal, which is the whole reason to do it this way.
+    Sidney Crosby at 37 has not declined the way an average 37-year-old declines.
+    Run one league-wide curve over everybody and you will be most wrong about the
+    players you spend the most time thinking about. So Kubota matches first and
+    ages second.
+</p>
+<p>
+    The 2023–24 release was the base model. The underlying model has been reworked
+    since, and an NHL-equivalency model added on top. That last piece is what puts
+    players from different leagues on the same scale.
+</p>
+
+<div class="zone-line">
+    <h2>The three models</h2>
+    <p class="zone-note">Different data availability, different coverage</p>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Kubota NHL</h3>
+                <p class="text-muted" style="font-size:.85rem;">The core model</p>
+                <p>
+                    The big one. Finds comparables back to 1963 and projects any NHL
+                    player with games in each of the three prior seasons.
                 </p>
-            <p class="text-white">
-              <strong>3. KUBOTA NHL EQUIVALENCIES</strong><br>
-              - The most ambitious of the three, the NHL Equivalencies model attempts to project how all NHL-affiliated players with fewer than 3 seasons of NHL experience would perform in the NHL this season, given their production in lower-level leagues.<br>
-              - Due to limited data available, the model provides the following statistics:
-              <ul>
-                <li>GP (Games Played)</li>
-                <li>G (Goals)</li>
-                <li>A (Assists)</li>
-                <li>PTS (Points)</li>
-                <li>PIM (Penalty Minutes)</li>
-              </ul>
-            </p>
-            <h2 class="text-white">The Future of KUBOTA Hockey </h2>
-              <strong>Features upon website release:</strong>
-              <ul>
-                <li>2024 NHL skater projections.</li>
-                <li>2024 NHLe projections for NHL affiliated skaters.</li>
-                <li>7 Year projections for NHL associated skaters.</li>
-                <li>7 Year NHL organizational outlook page.</li>
-                <li>Dynasty league rankings.</li>
-              </ul>
-              - <strong>Features to be added soon:</strong>
-              <ul>
-                <li>7 Year NHL affiliated goalie projections.</li>
-                <li>Roster/Line builder tool.</li>
-                <li>SHL, LIIGA, DEL, NL, KHL projections.</li>
-                <li>2024 NHL goalie projections.</li>
-              </ul>
-            </p>
-
+                <p class="mb-1"><strong>Projects</strong></p>
+                <ul style="font-size:.88rem;color:var(--fog);">
+                    <li>Games played, goals, assists, points</li>
+                    <li>Shots on goal, penalty minutes, plus/minus</li>
+                    <li>Power-play goals and assists</li>
+                    <li>Short-handed goals and assists</li>
+                </ul>
+            </div>
         </div>
     </div>
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Kubota NHL Peripherals</h3>
+                <p class="text-muted" style="font-size:.85rem;">Post-2007 data only</p>
+                <p>
+                    Hits and blocks were not tracked before 2007, so these two run
+                    through the same process against a much shorter history.
+                </p>
+                <p class="mb-1"><strong>Projects</strong></p>
+                <ul style="font-size:.88rem;color:var(--fog);">
+                    <li>Blocked shots</li>
+                    <li>Hits</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Kubota NHL Equivalencies</h3>
+                <p class="text-muted" style="font-size:.85rem;">The most ambitious</p>
+                <p>
+                    Estimates what a player with fewer than three NHL seasons would do
+                    in the NHL, working from his production in lower leagues. Fewer
+                    categories here, because there is less to go on.
+                </p>
+                <p class="mb-1"><strong>Projects</strong></p>
+                <ul style="font-size:.88rem;color:var(--fog);">
+                    <li>Games played, goals, assists, points</li>
+                    <li>Penalty minutes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <div class="row mt-4">
+<div class="zone-line">
+    <h2>Reading a projection</h2>
+</div>
+
+<dl class="row" style="font-size:.92rem;">
+    <dt class="col-sm-3">NHLe</dt>
+    <dd class="col-sm-9">NHL-equivalent. Production translated onto the NHL scale so you can compare across leagues.</dd>
+
+    <dt class="col-sm-3">Similarity score</dt>
+    <dd class="col-sm-9">How closely a player from history matches. Higher is closer. The spread across the top ten tells you more than the single best match does.</dd>
+
+    <dt class="col-sm-3">VORP</dt>
+    <dd class="col-sm-9">Value over replacement. Fantasy points above the worst starter at the same position in your league. This is the number that should drive your draft and your trades.</dd>
+
+    <dt class="col-sm-3">84-game basis</dt>
+    <dd class="col-sm-9">Every skater on the current-season pages is run over a full 84 games. That keeps the comparison about production rather than who stays healthy, and it means the same player shows the same total everywhere on the site.</dd>
+
+    <dt class="col-sm-3">Value index</dt>
+    <dd class="col-sm-9">Cap hit per projected point, set against the league median. Over 100 beats the median, under 100 trails it.</dd>
+</dl>
+
+<div class="zone-line">
+    <h2>What's coming</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <p class="mb-1"><strong>Available now</strong></p>
+        <ul style="color:var(--fog);">
+            <li>Skater projections for the current season</li>
+            <li>NHLe projections for NHL-affiliated skaters</li>
+            <li>Seven-year projections and organisational outlooks</li>
+            <li>Contract value and a fantasy trade analyzer</li>
+        </ul>
+    </div>
+    <div class="col-md-6 mb-3">
+        <p class="mb-1"><strong>In progress</strong></p>
+        <ul style="color:var(--fog);">
+            <li>Goalie projections, current season and seven-year</li>
+            <li>Roster and line builder</li>
+            <li>SHL, Liiga, DEL, NL and KHL projections</li>
+        </ul>
     </div>
 </div>
 {% endblock %}
