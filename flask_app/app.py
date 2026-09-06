@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import os
 
-KUBOTA_BUILD = "2026-09-05 nan-safe"
+KUBOTA_BUILD = "2026-09-06 nan-safe"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("KUBOTA_SECRET_KEY", "dev-only-change-me")
