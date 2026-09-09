@@ -35,6 +35,14 @@
       <label for="teams">Teams</label>
       <input type="number" class="form-control" id="teams" name="teams" value="12" min="2">
     </div>
+    <div class="form-group col-sm-6 col-lg-2">
+      <label for="gp_basis">Games Played</label>
+      <select class="form-control" id="gp_basis" name="gp_basis">
+        {% for key, label in gp_basis_labels.items() %}
+        <option value="{{ key }}" {% if key == default_gp_basis %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
   </div>
 
   <details class="setting-block" open>
@@ -85,7 +93,8 @@
     <p class="text-muted setting-note">
       Roster size sets where replacement level falls, which is what every value
       on this page is measured against. A 10-team league and a 16-team league
-      will price the same trade differently. Every skater is run over 84 games.
+      will price the same trade differently. Games played follows whichever
+      basis you pick above.
     </p>
   </details>
 

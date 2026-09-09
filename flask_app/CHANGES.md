@@ -302,3 +302,52 @@ diff. Delete it whenever you like.
 Untouched: `login.html`, `register.html`, `upgrade.html` (no routes exist for
 these — they reference `url_for('login')` and would raise if ever rendered),
 `team_insights.html` and `team_insights.js` (both empty files).
+
+
+## Baseline redesign: streaming depth now correctly counts as position value
+
+Following the last change, you confirmed the streaming behaviour itself
+(best remaining player regardless of position fills UTIL/STREAM) is exactly
+what you want, and asked for the baseline to reflect it properly: if a
+position's surplus talent is deep enough to be the one regularly filling
+those flex spots, that position should be MORE valuable, not less.
+
+**The redesign.** A position's baseline is now the worst FantasyPoints among
+everyone genuinely startable there -- which is two groups, not one:
+
+1. players who won a position-locked slot in that group, and
+2. players pulled in through UTIL or STREAM who are ELIGIBLE for that group
+   (even though the actual slot they filled was position-blind).
+
+A position nobody needs to stream from keeps its plain position-locked
+baseline, unchanged. A position that regularly supplies the flex picks gets
+a lower baseline, and its top players get more VORP -- which is the dynamic
+you asked for.
+
+**Why this isn't the same bug back under a new name.** The original code did
+something in this spirit, but through a single fixed bucket per player
+(D > LW > C > RW, first match wins) rather than his real eligibility, so
+which position it happened to help was arbitrary -- one incidental STREAM
+center (Joshua Norris) was single-handedly setting the entire center
+baseline. This version pulls from every player who is genuinely eligible at
+that position, so the result reflects real depth rather than one player's
+season. Checked directly: the current center baseline (383.0) is fed by 62
+flex-eligible centers, and the eight lowest are tightly clustered
+(383.0, 383.2, 384.2, 395.6...) -- dropping the single worst contributor
+moves the baseline by 0.2, not by hundreds of points.
+
+**Result:** with default settings, D-share of the top-30 by VORP is back to
+17% -- matching what the site showed before this week's fixes -- but now
+because forwards are demonstrably the ones supplying nearly all the flex
+depth (38 of 40 flex slots went to centers in this run), not because of an
+accidental single-outlier bug.
+
+Verified: the multi-position-eligibility fix and the FOL categories fix both
+still hold under the new baseline (checked directly, not assumed), full route
+regression passes across all three GP-basis database schemas, fw_def mode
+runs cleanly with no null VORP/baseline values, and per-request performance
+is unaffected (~0.03s).
+
+If you want UTIL and STREAM to count differently here (e.g. only streaming
+depth should count, not the smaller UTIL pool), that's a small change to
+which `RosterSource` values feed the flex pool -- say the word.

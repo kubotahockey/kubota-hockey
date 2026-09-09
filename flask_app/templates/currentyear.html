@@ -19,7 +19,7 @@
         <h5 class="mb-3">How the settings work</h5>
         <p><strong>Points League:</strong> Adjust the scoring settings to reflect your league's point system. The "Fantasy Points" will be calculated based on these settings.</p>
         <p><strong>Categories League:</strong> The scoring settings allow you to include or exclude categories by setting them to 1 (include) or 0 (exclude). The player's total value is calculated based on how much they exceed or fall below the league average in these categories.</p>
-        <p><strong>Games played:</strong> Every skater is run over a full 84-game season, so you are comparing production and not availability.</p>
+        <p><strong>Games played:</strong> Choose the basis for how many games each skater plays. "Full 84 games" puts everyone on the same level except known injuries, which are already reduced by their projected missed time. "Best of the last 3 years" uses each player's strongest recent season. "Blend" averages the two.</p>
     </div>
     
     <form id="scoring-settings-form" class="settings-panel mb-4">
@@ -44,6 +44,14 @@
             <div class="form-group col-sm-6 col-lg-2">
               <label for="teams">Teams</label>
               <input type="number" class="form-control" id="teams" name="teams" value="12" min="2">
+            </div>
+            <div class="form-group col-sm-6 col-lg-2">
+                <label for="gp-basis">Games Played</label>
+                <select class="form-control" id="gp-basis" name="gp_basis">
+                    {% for key, label in gp_basis_labels.items() %}
+                    <option value="{{ key }}" {% if key == default_gp_basis %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
     

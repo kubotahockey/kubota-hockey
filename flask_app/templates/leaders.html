@@ -6,10 +6,10 @@
 <div class="page-head">
   <h1>Projected leaders</h1>
   <p class="lede">
-    Who the model has finishing on top in each category this season. Everyone is run
-    over a full 84 games, the same basis as the projections table, so these are
-    production numbers and not availability numbers. Switch to per game if you want
-    the rate on its own.
+    Who the model has finishing on top in each category this season. Season
+    totals use whichever games-played basis you pick below, so these are
+    production numbers, not raw availability numbers. Switch to per game if you
+    want the rate on its own.
   </p>
 </div>
 
@@ -17,8 +17,16 @@
   <div class="form-group">
     <label for="basis">Measure</label>
     <select class="form-control" id="basis" name="basis" onchange="this.form.submit()">
-      <option value="total" {% if basis == 'total' %}selected{% endif %}>Season total (84 GP)</option>
+      <option value="total" {% if basis == 'total' %}selected{% endif %}>Season total</option>
       <option value="per_game" {% if basis == 'per_game' %}selected{% endif %}>Per game</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="gp_basis">Games Played</label>
+    <select class="form-control" id="gp_basis" name="gp_basis" onchange="this.form.submit()">
+      {% for key, label in gp_basis_labels.items() %}
+      <option value="{{ key }}" {% if gp_basis == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
     </select>
   </div>
   <div class="form-group">

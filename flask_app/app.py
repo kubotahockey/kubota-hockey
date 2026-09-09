@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import os
 
-KUBOTA_BUILD = "2026-09-06 nan-safe"
+KUBOTA_BUILD = "2026-09-08 nan-safe"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("KUBOTA_SECRET_KEY", "dev-only-change-me")
@@ -129,7 +129,7 @@ def _assert_table(conn_engine, table_name):
         ) from e
         
         
-LAST_UPDATE = "September 4, 2026"
+LAST_UPDATE = "September 8, 2026"
 
 # =============================================================================
 # HELPERS
@@ -166,12 +166,112 @@ rename_map_stats = {
 }
 stats.rename(columns={k: v for k, v in rename_map_stats.items() if k in stats.columns}, inplace=True)
 
-# GPNEW = 84 * GP_Percent (fallback 84)
-if "GPNEW" not in stats.columns:
-    if "GP_Percent" in stats.columns:
-        stats["GPNEW"] = (84 * pd.to_numeric(stats["GP_Percent"], errors="coerce")).clip(0, 84)
+# -----------------------------------------------------------------------------
+# Games-played basis
+# -----------------------------------------------------------------------------
+# FINAL_PROJECTIONS carries three games-played columns rather than one:
+#
+#   GP_84       everyone at 84, except a known-injured player is set to
+#               84 minus his projected missed games
+#   GP_Max3Yr   his best single-season GP over the last three years
+#   GP_Mixed    the average of the two above
+#
+# GP_Percent (a single fraction the site used to derive 84 * GP_Percent) has
+# been retired along with it. All three are carried through so the person can
+# choose the basis on /currentyear, /trade and /leaders; GP_84 is the default,
+# matching the site's previous fixed-84 behaviour.
+GP_BASIS_COLUMNS = {
+    "GP_84": "GP_84",
+    "GP_Max3Yr": "GP_Max3Yr",
+    "GP_Mixed": "GP_Mixed",
+}
+GP_BASIS_LABELS = {
+    "GP_84": "Full 84 games",
+    "GP_Max3Yr": "Best of the last 3 years",
+    "GP_Mixed": "Blend of 84 and best-3yr",
+}
+DEFAULT_GP_BASIS = "GP_84"
+
+# Alternate spellings this will accept for each basis, on top of an
+# exact-name match. Guards against the three options silently collapsing
+# into one another (and the dropdown appearing to do nothing) if the real
+# column names in FINAL_PROJECTIONS differ from GP_84 / GP_Max3Yr / GP_Mixed
+# by case or punctuation.
+_GP_COLUMN_ALIASES = {
+    "GP_84":     ["gp_84", "gp84", "gp_full", "gpfull"],
+    "GP_Max3Yr": ["gp_max3yr", "gpmax3yr", "gp_max_3yr", "gp_3yr_max",
+                  "gp_best3yr", "gpbest3yr", "gp_best_3yr", "max3yrgp"],
+    "GP_Mixed":  ["gp_mixed", "gpmixed", "gp_blend", "gpblend", "gp_avg", "gpavg"],
+}
+
+
+def _normalize_colname(name: str) -> str:
+    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+
+
+def _resolve_gp_column(basis: str, columns) -> str | None:
+    """Find the real column for a GP basis, tolerant of case and punctuation.
+
+    Tries, in order: an exact match on the expected name, a case/punctuation
+    -insensitive match on the expected name, then the same against the known
+    aliases. Returns the actual column name found, or None.
+    """
+    wanted = GP_BASIS_COLUMNS[basis]
+    if wanted in columns:
+        return wanted
+
+    norm_map = {_normalize_colname(c): c for c in columns}
+    target_norm = _normalize_colname(wanted)
+    if target_norm in norm_map:
+        return norm_map[target_norm]
+
+    for alias in _GP_COLUMN_ALIASES.get(basis, []):
+        alias_norm = _normalize_colname(alias)
+        if alias_norm in norm_map:
+            return norm_map[alias_norm]
+    return None
+
+
+# Resolved once at load time. Printed loudly and exposed on /healthz, so a
+# naming mismatch between this code and the live FINAL_PROJECTIONS table is
+# visible immediately instead of silently making all three dropdown options
+# identical (which is what a fallback does: it looks like the feature is
+# "broken" when it is actually just reading the wrong column, or none).
+GP_BASIS_RESOLUTION = {}
+
+print("Resolving games-played basis columns from FINAL_PROJECTIONS:")
+for _basis in GP_BASIS_COLUMNS:
+    _found = _resolve_gp_column(_basis, stats.columns)
+    GP_BASIS_RESOLUTION[_basis] = _found
+    if _found:
+        stats[GP_BASIS_COLUMNS[_basis]] = pd.to_numeric(stats[_found], errors="coerce").fillna(0.0)
+        print(f"  {_basis:<11} <- '{_found}'"
+              + ("" if _found == GP_BASIS_COLUMNS[_basis] else "  (alias match)"))
     else:
-        stats["GPNEW"] = 84.0
+        # Nothing matched. Fall back to the old GP_Percent, then to a flat 84,
+        # so nothing downstream throws a KeyError -- but this is a degraded
+        # state, not the normal path, hence the loud warning.
+        if "GP_Percent" in stats.columns:
+            stats[GP_BASIS_COLUMNS[_basis]] = (
+                84 * pd.to_numeric(stats["GP_Percent"], errors="coerce")
+            ).clip(0, 84)
+            print(f"  {_basis:<11} NOT FOUND -- falling back to 84 * GP_Percent")
+        else:
+            stats[GP_BASIS_COLUMNS[_basis]] = 84.0
+            print(f"  {_basis:<11} NOT FOUND -- no GP_Percent either, using flat 84.0")
+
+if all(v is None for v in GP_BASIS_RESOLUTION.values()):
+    print("  WARNING: none of the three GP basis columns were found in "
+          "FINAL_PROJECTIONS. The Games Played dropdown will have no effect "
+          "until the column names match (see GP_BASIS_COLUMNS / "
+          "_GP_COLUMN_ALIASES in app.py), or the table is confirmed to still "
+          "use the old GP_Percent column instead.")
+
+# GPNEW: a general-purpose games-played column kept for anything that still
+# expects a single number (the unused legacy `data` payload below). Aliases
+# GP_84 now rather than GP_Percent, which no longer exists.
+if "GPNEW" not in stats.columns:
+    stats["GPNEW"] = stats[GP_BASIS_COLUMNS[DEFAULT_GP_BASIS]]
 stats["GPNEW"] = pd.to_numeric(stats["GPNEW"], errors="coerce").fillna(0.0)
 
 # Attach Image via roster (logo) by team (do NOT mix stats, only logos)
@@ -193,6 +293,7 @@ if "Pos" in stats.columns:
 # Thin to exact columns used by /currentyear
 CURRENT_COLS = [
     'Link','name','team','Image','Pos','Age','GPNEW',
+    'GP_84','GP_Max3Yr','GP_Mixed',
     'G_GP','A_GP','PTS_GP','SOG_GP','PIM_GP','PLUSMINUS_GP',
     'PPG','PPA','SHG','SHA','BLK_GP','HIT_GP','FOL_GP','FOW_GP'
 ]
@@ -415,6 +516,7 @@ def forecasts():
 def currentyear():
     cols = [
         'Link','name','team','Image','Pos','Age','GPNEW',
+        'GP_84','GP_Max3Yr','GP_Mixed',
         'G_GP','A_GP','PTS_GP','SOG_GP','PIM_GP','PLUSMINUS_GP',
         'PPG','PPA','SHG','SHA','BLK_GP','HIT_GP','FOL_GP','FOW_GP'
     ]
@@ -425,12 +527,14 @@ def currentyear():
     initial_rows = build_fantasy_table(DEFAULT_SCORING)
     if not isinstance(initial_rows, str):
         initial_rows = ''
-    return render_template('currentyear.html', data=data, initial_rows=initial_rows)
+    return render_template('currentyear.html', data=data, initial_rows=initial_rows,
+                           gp_basis_labels=GP_BASIS_LABELS,
+                           default_gp_basis=DEFAULT_GP_BASIS)
 
 
 DEFAULT_SCORING = MultiDict([
     ('league_type', 'points'), ('position_grouping', 'split'),
-    ('teams', '12'),
+    ('teams', '12'), ('gp_basis', DEFAULT_GP_BASIS),
     ('lw_starters', '2'), ('rw_starters', '2'), ('c_starters', '2'),
     ('d_starters', '4'), ('util_starters', '1'), ('bench_split', '4'),
     ('g_points', '6'), ('a_points', '4'), ('pts_points', '0'),
@@ -512,9 +616,17 @@ def compute_fantasy_frame(form):
         # --- Data ---
         df_selected = df_final_projections.copy()
 
-        # Everyone is projected over a full 84-game season, so players are
-        # compared on production rather than on availability.
-        df_selected['GP'] = 84.0
+        # Games-played basis. Three options live in FINAL_PROJECTIONS now
+        # (GP_84, GP_Max3Yr, GP_Mixed) rather than the single GP_Percent this
+        # used to derive 84 * GP_Percent from. These are already-computed
+        # numbers -- read the chosen one directly and use it as-is; the only
+        # safety net is turning a missing value into 0 so arithmetic below
+        # doesn't blow up on NaN.
+        gp_basis = (form.get('gp_basis') or DEFAULT_GP_BASIS).strip()
+        gp_col = GP_BASIS_COLUMNS.get(gp_basis, GP_BASIS_COLUMNS[DEFAULT_GP_BASIS])
+        if gp_col not in df_selected.columns:
+            gp_col = GP_BASIS_COLUMNS[DEFAULT_GP_BASIS]
+        df_selected['GP'] = pd.to_numeric(df_selected[gp_col], errors='coerce').fillna(0.0)
 
         # Convenience totals
         df_selected['PPP'] = df_selected['PPG'] + df_selected['PPA']
@@ -564,6 +676,15 @@ def compute_fantasy_frame(form):
             # Values must match keys we derive below (G, A, PTS, SOG, PIM, PLUSMINUS, PPG, PPA, PPP, SHG, SHA, SHP, BLK, HIT, FOL, FOW)
             included_cats = set(form.getlist('categories'))
 
+            # Direction per category: most stats are "more is better", but a
+            # few (faceoff losses) are the opposite. FANTASY_CATS (used by the
+            # trade analyzer) already carries this per stat -- reuse it here so
+            # the two engines agree, instead of this branch treating every
+            # category as "more is better" regardless of what it actually
+            # measures. Previously FOL had no direction at all, so a player
+            # who lost MORE faceoffs scored BETTER in a categories league.
+            category_higher_is_better = {key: higher for key, _, _, higher in FANTASY_CATS}
+
             cat_cols = [
                 'G_GP','A_GP','PTS_GP',  # include PTS
                 'SOG_GP','PIM_GP','PLUSMINUS_GP',
@@ -579,43 +700,79 @@ def compute_fantasy_frame(form):
                 # Map column name to checkbox key
                 key = c.replace('_GP', '')  # e.g., 'PTS_GP' -> 'PTS', 'BLK_GP' -> 'BLK', 'PPG' -> 'PPG'
                 mult = 1.0 if key in included_cats else 0.0
+                sign = 1.0 if category_higher_is_better.get(key, True) else -1.0
 
                 if mult != 0 and s and s != 0:
-                    df_selected['FantasyPoints'] += ((df_selected[total_col] - m) / s) * mult
+                    df_selected['FantasyPoints'] += ((df_selected[total_col] - m) / s) * mult * sign
 
         # Normalize FP
         df_selected['FantasyPoints'] = pd.to_numeric(df_selected['FantasyPoints'], errors='coerce').fillna(0.0)
 
-        # --- Position grouping for VORP ---
-        def to_pos_group(pos: str) -> str:
+        # --- Position eligibility for VORP ---
+        # Every roster-slot group a player can legitimately fill, not just one.
+        # A player listed as "RW/C" can be rostered at either -- collapsing him
+        # to a single fixed bucket (the old code checked D, then LW, then C,
+        # then RW, first match wins) meant he was measured only against
+        # whichever of his own positions happened to be checked first in that
+        # hardcoded order, regardless of which one he could actually be more
+        # valuably slotted into. A player with real flexibility should never
+        # come out worth LESS than a same-production single-position player;
+        # the old bucketing could make that happen.
+        def eligible_pos_groups(pos: str) -> list:
             s = pos or ''
-            if 'D' in s:
-                return 'D'
+            groups = []
             if position_grouping == 'split':
-                if 'LW' in s: return 'LW'
-                if 'C'  in s: return 'C'
-                if 'RW' in s: return 'RW'
-                return 'C'  # fallback forward bucket
-            else:
-                return 'F'
+                if 'LW' in s: groups.append('LW')
+                if 'C'  in s: groups.append('C')
+                if 'RW' in s: groups.append('RW')
+                if 'D'  in s: groups.append('D')
+                if not groups:
+                    groups.append('C')  # fallback forward bucket, as before
+            else:  # 'fw_def'
+                if 'D' in s:
+                    groups.append('D')
+                if 'D' not in s or any(tag in s for tag in ('LW', 'C', 'RW', 'F')):
+                    groups.append('F')
+                if not groups:
+                    groups.append('F')
+            seen, out = set(), []
+            for g in groups:
+                if g not in seen:
+                    seen.add(g)
+                    out.append(g)
+            return out
 
-        df_selected['PosGroup'] = df_selected['Pos'].apply(to_pos_group)
+        df_selected['EligibleGroups'] = df_selected['Pos'].apply(eligible_pos_groups)
 
         # --- Roster selection: POS -> UTIL -> STREAM ---
         df_selected['Rostered'] = False
         df_selected['RosterSource'] = ''
+        df_selected['PosGroup'] = None
 
-        # Step 1: position-locked starters
-        for grp, k in roster_counts.items():
-            k = max(int(k), 0)
-            if k == 0:
+        # Step 1: position-locked starters. Filled by overall value, top down,
+        # with each player claiming a slot among whichever of HIS eligible
+        # groups still has room -- rather than every player being pre-sorted
+        # into one fixed group and competing only within it. When a
+        # multi-eligible player has more than one open group to choose from,
+        # he takes the tightest one (fewest slots left), the standard
+        # greedy-assignment heuristic: it leaves the roomier position's slots
+        # for players who have no other option, rather than one flexible
+        # player blocking a spot a single-position player actually needed.
+        remaining_slots = {grp: max(int(k), 0) for grp, k in roster_counts.items()}
+        value_order = df_selected['FantasyPoints'].sort_values(ascending=False).index
+
+        for idx in value_order:
+            if sum(remaining_slots.values()) <= 0:
+                break
+            open_groups = [g for g in df_selected.at[idx, 'EligibleGroups']
+                          if remaining_slots.get(g, 0) > 0]
+            if not open_groups:
                 continue
-            grp_pool = df_selected.loc[df_selected['PosGroup'] == grp, 'FantasyPoints']
-            take = min(k, len(grp_pool))
-            if take > 0:
-                grp_idx = grp_pool.nlargest(take).index
-                df_selected.loc[grp_idx, 'Rostered'] = True
-                df_selected.loc[grp_idx, 'RosterSource'] = 'POS'
+            grp = min(open_groups, key=lambda g: remaining_slots[g])
+            remaining_slots[grp] -= 1
+            df_selected.at[idx, 'Rostered'] = True
+            df_selected.at[idx, 'RosterSource'] = 'POS'
+            df_selected.at[idx, 'PosGroup'] = grp
 
         # Step 2: utility (any skater)
         if util_total > 0:
@@ -635,13 +792,57 @@ def compute_fantasy_frame(form):
                 df_selected.loc[stream_idx, 'Rostered'] = True
                 df_selected.loc[stream_idx, 'RosterSource'] = 'STREAM'
 
-        # --- Replacement baselines from ACTUAL rostered set ---
-        rostered_df = df_selected.loc[df_selected['Rostered']]
-        baselines = {}
-        for grp, sub in rostered_df.groupby('PosGroup'):
-            baselines[grp] = float(sub['FantasyPoints'].min()) if not sub.empty else 0.0
+        # --- Replacement baselines ---
+        # A position's baseline is the worst player who is genuinely
+        # STARTABLE at it -- which now correctly includes two kinds of player:
+        #
+        #   1. someone who won a position-locked slot there (RosterSource
+        #      == 'POS' and PosGroup == that group), and
+        #   2. someone pulled in through UTIL or STREAM who is ELIGIBLE for
+        #      that group, even though the actual slot he filled was
+        #      position-blind.
+        #
+        # That second part is deliberate: if forwards are deep enough that
+        # they are routinely the ones claiming the position-blind flex spots,
+        # that IS real streaming depth at forward, and it should make
+        # forwards more valuable (a lower baseline, more VORP) -- not be
+        # invisible to the calculation. A position nobody needs to stream in
+        # from keeps whatever its position-locked baseline already was.
+        #
+        # The old code did something in this spirit, but through a single
+        # fixed bucket per player rather than his real eligibility, so which
+        # position it happened to help was arbitrary rather than earned. This
+        # keeps the intended effect and drops the arbitrariness: a UTIL/STREAM
+        # player now only pulls down the baseline of a position he could
+        # actually have played, and a multi-eligible one can inform more than
+        # one position's baseline rather than being locked to a single guess.
+        flex = df_selected.loc[df_selected['RosterSource'].isin(['UTIL', 'STREAM'])]
 
-        df_selected['AvgPosFP'] = df_selected['PosGroup'].map(lambda g: baselines.get(g, 0.0)).fillna(0.0)
+        baselines = {}
+        for grp in roster_counts:
+            starters = df_selected.loc[
+                (df_selected['RosterSource'] == 'POS') & (df_selected['PosGroup'] == grp),
+                'FantasyPoints'
+            ]
+            flex_eligible = flex.loc[
+                flex['EligibleGroups'].apply(lambda groups, g=grp: g in groups),
+                'FantasyPoints'
+            ]
+            pool = pd.concat([starters, flex_eligible])
+            baselines[grp] = float(pool.min()) if not pool.empty else 0.0
+
+        def player_baseline(row):
+            if row['RosterSource'] == 'POS' and row['PosGroup'] in baselines:
+                return baselines[row['PosGroup']]
+            # UTIL, STREAM, or unrostered: no single group determined his
+            # placement, so measure him against the most favourable of his
+            # eligible positions -- the deal a manager would actually give
+            # him -- rather than an arbitrary harder one.
+            elig = [baselines[g] for g in row['EligibleGroups'] if g in baselines]
+            return min(elig) if elig else 0.0
+
+        df_selected['AvgPosFP'] = df_selected.apply(player_baseline, axis=1)
+        df_selected.drop(columns=['EligibleGroups'], inplace=True)
 
         # --- VORP ---
         df_selected['VORP'] = df_selected['FantasyPoints'] - df_selected['AvgPosFP']
@@ -826,7 +1027,9 @@ def _league_form(args):
 def trade():
     players = sorted(df_final_projections['name'].dropna().unique().tolist())
     return render_template('trade.html', players=players,
-                           cats=FANTASY_CATS, default_cats=DEFAULT_CATS)
+                           cats=FANTASY_CATS, default_cats=DEFAULT_CATS,
+                           gp_basis_labels=GP_BASIS_LABELS,
+                           default_gp_basis=DEFAULT_GP_BASIS)
 
 
 @app.route('/api/trade')
@@ -1112,6 +1315,8 @@ def _leaders_frame():
                   pd.to_numeric(f['PPA'], errors='coerce').fillna(0)
     for _, _, col, _ in LEADER_CATEGORIES:
         f[col] = pd.to_numeric(f[col], errors='coerce').fillna(0.0)
+    for _col in GP_BASIS_COLUMNS.values():
+        f[_col] = pd.to_numeric(f[_col], errors='coerce').fillna(0.0)
     f['Pos'] = f['Pos'].astype(str)
     return f
 
@@ -1122,6 +1327,8 @@ def leaders():
     basis = request.args.get('basis', 'total')          # 'total' or 'per_game'
     pos_filter = (request.args.get('pos') or '').upper()
     team_filter = request.args.get('team') or ''
+    gp_basis = request.args.get('gp_basis', DEFAULT_GP_BASIS)
+    gp_col = GP_BASIS_COLUMNS.get(gp_basis, GP_BASIS_COLUMNS[DEFAULT_GP_BASIS])
 
     f = _leaders_frame()
 
@@ -1134,9 +1341,9 @@ def leaders():
     elif pos_filter in ('C', 'LW', 'RW'):
         f = f[f['Pos'].str.contains(pos_filter, na=False)]
 
-    # Full 84 for everyone, matching the projections table and the trade
-    # analyzer, so the same player shows the same total on every page.
-    games = 84.0
+    # GP_Max3Yr and GP_Mixed vary player to player (an injured player's GP_84
+    # does too), so this is a per-row Series now rather than a flat 84.
+    games = f[gp_col] if gp_col in f.columns else pd.Series(84.0, index=f.index)
 
     boards = []
     for key, label, col, _ in LEADER_CATEGORIES:
@@ -1153,7 +1360,8 @@ def leaders():
 
     teams_list = sorted(x for x in df_final_projections['team'].dropna().unique())
     return render_template('leaders.html', boards=boards, teams_list=teams_list,
-                           basis=basis, pos_filter=pos_filter, team_filter=team_filter)
+                           basis=basis, pos_filter=pos_filter, team_filter=team_filter,
+                           gp_basis=gp_basis, gp_basis_labels=GP_BASIS_LABELS)
 
 
 @app.route('/compare')
@@ -1325,6 +1533,23 @@ def healthz():
     except Exception as exc:
         sample = {'error': f'{type(exc).__name__}: {exc}'}
 
+    # Did the three games-played options actually resolve to real, distinct
+    # columns in FINAL_PROJECTIONS, or did one or more silently fall back?
+    # If they all fell back to the same thing, the dropdown will have no
+    # effect -- this is the fastest way to see that from outside the code.
+    gp_diag = {}
+    for _basis, _target_col in GP_BASIS_COLUMNS.items():
+        col = df_final_projections[_target_col] if _target_col in df_final_projections.columns else None
+        gp_diag[_basis] = {
+            'resolved_from': GP_BASIS_RESOLUTION.get(_basis),
+            'min': float(col.min()) if col is not None and col.notna().any() else None,
+            'max': float(col.max()) if col is not None and col.notna().any() else None,
+            'mean': round(float(col.mean()), 2) if col is not None and col.notna().any() else None,
+            'n_distinct_values': int(col.nunique()) if col is not None else None,
+        }
+    all_equal = (df_final_projections['GP_84'].equals(df_final_projections['GP_Max3Yr'])
+                and df_final_projections['GP_84'].equals(df_final_projections['GP_Mixed']))
+
     return jsonify({
         'build': KUBOTA_BUILD,
         'flask': getattr(_flask, '__version__', 'unknown'),
@@ -1333,6 +1558,8 @@ def healthz():
         'database': os.path.basename(DB_PROD_PATH),
         'skaters_loaded': int(df_projections['name'].nunique()),
         'uncontracted_player_check': sample,
+        'gp_basis': gp_diag,
+        'gp_basis_all_identical': all_equal,
     })
 
 
