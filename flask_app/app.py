@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import os
 
-KUBOTA_BUILD = "2026-09-08 nan-safe"
+KUBOTA_BUILD = "2026-09-15 nan-safe"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("KUBOTA_SECRET_KEY", "dev-only-change-me")
@@ -129,7 +129,7 @@ def _assert_table(conn_engine, table_name):
         ) from e
         
         
-LAST_UPDATE = "September 8, 2026"
+LAST_UPDATE = "September 15, 2026"
 
 # =============================================================================
 # HELPERS
